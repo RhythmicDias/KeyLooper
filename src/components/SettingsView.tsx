@@ -2218,10 +2218,10 @@ const SettingsView: React.FC = () => {
             >
               <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
                 <span style={{ fontWeight: 700, fontSize: "14px", color: "var(--primary)" }}>
-                  Dr. Stephen Dias
+                  Stephen Dias
                 </span>
                 <span style={{ fontSize: "12px", color: "var(--text-color-muted)" }}>
-                  Pediatric Neurologist & Application Developer
+                  Medical Scribe/Application Developer
                 </span>
               </div>
               <p style={{ margin: 0, color: "var(--text-color-muted)" }}>

@@ -613,7 +613,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onNewChat }) => {
                 color: "var(--text-color-muted)",
               }}
             >
-              by Dr. Stephen Dias
+              by Stephen Dias
             </span>
           </button>
         </div>
