@@ -3,7 +3,7 @@
  * customizable keyboard shortcuts, unified Gemini dispatch, and lower-center error toast.
  */
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import ChatBubble from "./components/ChatBubble";
 import SettingsView from "./components/SettingsView";
 import SkillsView from "./components/SkillsView";
@@ -172,6 +172,7 @@ const App: React.FC = () => {
   const updateMessageMetadata = useAppStore((s) => s.updateMessageMetadata);
   const removeSubsequentMessages = useAppStore((s) => s.removeSubsequentMessages);
   const skills = useAppStore((s) => s.skills);
+  const setSessionSkill = useAppStore((s) => s.setSessionSkill);
   const availableModels = useAppStore(selectAvailableModels);
   const isSidebarOpen = useAppStore((s) => s.isSidebarOpen);
   const toggleSidebar = useAppStore((s) => s.toggleSidebar);
@@ -186,6 +187,19 @@ const App: React.FC = () => {
     : null;
 
   const [text, setText] = useState("");
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
+
+  const filteredSkills = useMemo(() => {
+    if (mentionQuery === null) return [];
+    const q = mentionQuery.toLowerCase().trim();
+    if (!q) return skills;
+    return skills.filter(
+      (sk) =>
+        sk.name.toLowerCase().includes(q) ||
+        sk.systemPrompt.toLowerCase().includes(q)
+    );
+  }, [skills, mentionQuery]);
   const [attachments, setAttachments] = useState<AttachedFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isAttaching, setIsAttaching] = useState(false);
@@ -738,6 +752,19 @@ const App: React.FC = () => {
     const currentSession = useAppStore
       .getState()
       .sessions.find((s) => s.id === currentSessionId);
+
+    // If message starts with or mentions a skill name (@SkillName), bind it to session
+    const directMentionMatch = msg.match(/^@([a-zA-Z0-9_\-\s]{2,30}?)(?:\s|$)/);
+    if (directMentionMatch && !currentSession?.skillId) {
+      const candidate = directMentionMatch[1].trim().toLowerCase();
+      const matchedSkill = skills.find(
+        (sk) => sk.name.toLowerCase() === candidate
+      );
+      if (matchedSkill) {
+        setSessionSkill(currentSessionId, matchedSkill.id);
+      }
+    }
+
     const history = (currentSession?.messages ?? []).slice(-20);
     const userMsgIndex = currentSession ? currentSession.messages.length : 0;
 
@@ -748,6 +775,7 @@ const App: React.FC = () => {
 
     appendMessage(currentSessionId, { role: "user", parts: userParts });
     setText("");
+    setMentionQuery(null);
     clearAttachments();
 
     await executeConversationTurn(
@@ -758,7 +786,87 @@ const App: React.FC = () => {
     );
   };
 
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setText(val);
+
+    const cursorPos = e.target.selectionStart ?? val.length;
+    const textUpToCursor = val.slice(0, cursorPos);
+
+    const match = textUpToCursor.match(/(?:^|\s)@([a-zA-Z0-9_\-\s]{0,30})$/);
+    if (match) {
+      setMentionQuery(match[1]);
+      setMentionIndex(0);
+    } else {
+      setMentionQuery(null);
+    }
+  };
+
+  const selectMentionSkill = (skill: (typeof skills)[number]) => {
+    let curSessionId = activeSessionId;
+    if (!curSessionId) {
+      curSessionId = createSession(skill.id);
+    } else {
+      setSessionSkill(curSessionId, skill.id);
+    }
+
+    const el = inputTextareaRef.current;
+    const cursorPos = el ? el.selectionStart : text.length;
+    const textUpToCursor = text.slice(0, cursorPos);
+    const textAfterCursor = text.slice(cursorPos);
+
+    const match = textUpToCursor.match(/(?:^|\s)@([a-zA-Z0-9_\-\s]{0,30})$/);
+    if (match) {
+      const atIdx = textUpToCursor.lastIndexOf("@");
+      const prefix = text.slice(0, atIdx);
+      const replacement = `@${skill.name} `;
+      const newFullText = prefix + replacement + textAfterCursor;
+      setText(newFullText);
+
+      const newPos = prefix.length + replacement.length;
+      setTimeout(() => {
+        if (inputTextareaRef.current) {
+          inputTextareaRef.current.focus();
+          inputTextareaRef.current.setSelectionRange(newPos, newPos);
+        }
+      }, 20);
+    }
+
+    setMentionQuery(null);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mentionQuery !== null) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMentionIndex((i) =>
+          filteredSkills.length > 0 ? (i + 1) % filteredSkills.length : 0
+        );
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMentionIndex((i) =>
+          filteredSkills.length > 0
+            ? (i - 1 + filteredSkills.length) % filteredSkills.length
+            : 0
+        );
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        if (filteredSkills.length > 0) {
+          e.preventDefault();
+          selectMentionSkill(filteredSkills[mentionIndex] || filteredSkills[0]);
+          return;
+        }
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setMentionQuery(null);
+        return;
+      }
+    }
+
     const sendBinding = shortcuts.sendMessage || "Enter";
     if (
       matchesShortcut(e, sendBinding) ||
@@ -900,19 +1008,277 @@ const App: React.FC = () => {
         className="input-card"
         style={{
           padding: isWelcome ? "28px 32px 22px 32px" : "12px 20px",
+          position: "relative",
         }}
       >
+        {/* Mention popup for @ skill selection */}
+        {mentionQuery !== null && (
+          <div
+            className="mention-popup fade-in"
+            style={{
+              position: "absolute",
+              bottom: "calc(100% + 8px)",
+              left: 0,
+              right: 0,
+              maxHeight: "270px",
+              overflowY: "auto",
+              background: "var(--input-bg)",
+              border: "1px solid var(--border-color)",
+              borderRadius: "14px",
+              boxShadow: "0 12px 36px rgba(0,0,0,0.28)",
+              zIndex: 100,
+              padding: "6px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "2px",
+              backdropFilter: "blur(14px)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "6px 10px 4px 10px",
+                borderBottom: "1px solid var(--border-color)",
+                marginBottom: "4px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <Icon
+                  name="smart_toy"
+                  size={15}
+                  style={{ color: "var(--primary)" }}
+                />
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontFamily: "'JetBrains Mono', monospace",
+                    color: "var(--text-color-muted)",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  Agent Skills ({filteredSkills.length})
+                </span>
+              </div>
+              <span
+                style={{
+                  fontSize: "10px",
+                  fontFamily: "'JetBrains Mono', monospace",
+                  color: "var(--text-color-muted)",
+                }}
+              >
+                ↑↓ Navigate • ↵ Select • Esc Close
+              </span>
+            </div>
+
+            {filteredSkills.length === 0 ? (
+              <div
+                style={{
+                  padding: "16px 12px",
+                  textAlign: "center",
+                  color: "var(--text-color-muted)",
+                  fontSize: "13px",
+                }}
+              >
+                No agent matching "{mentionQuery}".
+                <div style={{ marginTop: "6px" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMentionQuery(null);
+                      setView("skills");
+                    }}
+                    style={{
+                      padding: "4px 12px",
+                      borderRadius: "6px",
+                      background: "var(--primary)",
+                      color: "white",
+                      border: "none",
+                      fontSize: "11px",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                    }}
+                  >
+                    + Create or Import Skill
+                  </button>
+                </div>
+              </div>
+            ) : (
+              filteredSkills.map((sk, idx) => {
+                const isFocused = idx === mentionIndex;
+                return (
+                  <div
+                    key={sk.id}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      selectMentionSkill(sk);
+                    }}
+                    onMouseEnter={() => setMentionIndex(idx)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      background: isFocused
+                        ? "var(--border-color)"
+                        : "transparent",
+                      transition: "background 0.1s ease",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        minWidth: 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "7px",
+                          background: isFocused
+                            ? "var(--primary)"
+                            : "rgba(177,98,77,0.15)",
+                          color: isFocused ? "white" : "var(--primary)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Icon name="smart_toy" size={16} />
+                      </div>
+                      <div
+                        style={{
+                          minWidth: 0,
+                          display: "flex",
+                          flexDirection: "column",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            color: "var(--text-color)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {sk.name}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            color: "var(--text-color-muted)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            maxWidth: "460px",
+                          }}
+                        >
+                          {sk.systemPrompt}
+                        </span>
+                      </div>
+                    </div>
+                    {isFocused && (
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          fontFamily: "'JetBrains Mono', monospace",
+                          padding: "2px 6px",
+                          borderRadius: "4px",
+                          background: "var(--primary)",
+                          color: "white",
+                          fontWeight: 600,
+                          flexShrink: 0,
+                        }}
+                      >
+                        ↵ Select
+                      </span>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* Active Attached Skill Badge */}
+        {activeSkill && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "3px 10px 3px 8px",
+              borderRadius: "20px",
+              background: "var(--primary)",
+              color: "white",
+              width: "fit-content",
+              marginBottom: "8px",
+              fontSize: "12px",
+              fontFamily: "'JetBrains Mono', monospace",
+              fontWeight: 600,
+            }}
+          >
+            <Icon name="smart_toy" size={14} />
+            <span>Agent: {activeSkill.name}</span>
+            <button
+              onClick={() => {
+                if (activeSessionId)
+                  setSessionSkill(activeSessionId, undefined);
+              }}
+              title="Detach agent persona"
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "white",
+                cursor: "pointer",
+                padding: "0 2px",
+                display: "flex",
+                alignItems: "center",
+                opacity: 0.8,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = "1";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = "0.8";
+              }}
+            >
+              <Icon name="close" size={13} />
+            </button>
+          </div>
+        )}
+
         <textarea
           ref={inputTextareaRef}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={handleTextChange}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
+          onBlur={() => {
+            setTimeout(() => setMentionQuery(null), 180);
+          }}
           disabled={isLoading}
           placeholder={
             isWelcome
-              ? "How can I help you today?"
-              : "Continue the conversation…"
+              ? "How can I help you today? (Type @ to invoke an agent skill)"
+              : "Continue the conversation… (Type @ for agents)"
           }
           rows={1}
           style={{

@@ -283,6 +283,7 @@ interface AppState {
   createSession: (skillId?: string) => string;
   deleteSession: (id: string) => void;
   selectSession: (id: string) => void;
+  setSessionSkill: (sessionId: string, skillId?: string) => void;
   appendMessage: (sessionId: string, message: ChatMessage) => void;
   renameSession: (id: string, title: string) => void;
   clearAllSessions: () => void;
@@ -467,6 +468,19 @@ export const useAppStore = create<AppState>()(
         }),
 
       selectSession: (id) => set({ activeSessionId: id }),
+
+      setSessionSkill: (sessionId, skillId) =>
+        set((s) => ({
+          sessions: s.sessions.map((sess) =>
+            sess.id === sessionId
+              ? {
+                  ...sess,
+                  skillId: skillId || undefined,
+                  updatedAt: Date.now(),
+                }
+              : sess
+          ),
+        })),
 
       appendMessage: (sessionId, message) =>
         set((s) => ({
