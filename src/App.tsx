@@ -18,6 +18,7 @@ import {
   selectHealthyKeyCount,
   matchesShortcut,
   formatShortcutForDisplay,
+  isMac,
 } from "./store/useAppStore";
 import { KeyRotator } from "./lib/KeyRotator";
 import { sendMessage, uploadFileToGemini } from "./lib/geminiClient";
@@ -1452,7 +1453,7 @@ const App: React.FC = () => {
 
   return (
     <div
-      className="flex flex-col h-screen w-screen overflow-hidden"
+      className={`flex flex-col h-screen w-screen overflow-hidden ${isMac ? "macos-window-frame" : ""}`}
       style={{
         backgroundColor: "var(--bg-color)",
         backgroundImage: "var(--bg-image)",
@@ -1476,13 +1477,21 @@ const App: React.FC = () => {
           HEADER — Sidebar toggle + Logo + Mode Switcher + Key Health + Theme
       ════════════════════════════════════════════════ */}
       <header
+        data-tauri-drag-region
+        onMouseDown={async (e) => {
+          if (e.button === 0 && !(e.target as HTMLElement).closest("button, input, select, textarea, a")) {
+            const { getCurrentWindow } = await import("@tauri-apps/api/window");
+            try { await getCurrentWindow().startDragging(); } catch (_) {}
+          }
+        }}
         className="flex-shrink-0 flex items-center justify-between"
         style={{
           borderBottom: "1px solid var(--border-color)",
           paddingLeft: "20px",
           paddingRight: "24px",
           height: "60px",
-        }}
+          WebkitAppRegion: "drag",
+        } as React.CSSProperties}
       >
         {/* Left: Sidebar Toggle + Logo + Workspace Chip */}
         <div className="flex items-center gap-3">

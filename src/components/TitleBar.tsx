@@ -16,9 +16,22 @@ const TitleBar: React.FC = () => {
     }
   };
 
+  const handleMouseDown = async (e: React.MouseEvent) => {
+    // Only drag with primary left mouse button, and ignore clicks on buttons/inputs
+    if (e.button === 0 && !(e.target as HTMLElement).closest("button, input, select, textarea")) {
+      const win = getCurrentWindow();
+      try {
+        await win.startDragging();
+      } catch (err) {
+        // Fallback to data-tauri-drag-region if startDragging is not available
+      }
+    }
+  };
+
   return (
     <div
       data-tauri-drag-region
+      onMouseDown={handleMouseDown}
       onDoubleClick={handleDoubleClick}
       className="flex items-center justify-between select-none"
       style={{
@@ -201,12 +214,12 @@ const TitleBar: React.FC = () => {
           </div>
 
           <div
-            className="flex items-center h-full flex-shrink-0 gap-4 pr-3"
+            className="flex items-center h-full flex-shrink-0 gap-1 pr-4"
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           >
             <button
-              className="h-full px-4 flex items-center justify-center transition-colors rounded-md my-1"
-              style={{ cursor: "default", width: "46px" }}
+              className="h-full px-3 flex items-center justify-center transition-colors rounded-md my-1"
+              style={{ cursor: "default", width: "42px" }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "var(--input-bg)")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               onClick={() => getCurrentWindow().minimize()}
@@ -216,8 +229,8 @@ const TitleBar: React.FC = () => {
               </span>
             </button>
             <button
-              className="h-full px-4 flex items-center justify-center transition-colors rounded-md my-1"
-              style={{ cursor: "default", width: "46px" }}
+              className="h-full px-3 flex items-center justify-center transition-colors rounded-md my-1"
+              style={{ cursor: "default", width: "42px" }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "var(--input-bg)")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               onClick={async () => {
@@ -235,8 +248,8 @@ const TitleBar: React.FC = () => {
               </span>
             </button>
             <button
-              className="h-full px-4 flex items-center justify-center transition-colors rounded-md my-1"
-              style={{ cursor: "default", width: "46px" }}
+              className="h-full px-3 flex items-center justify-center transition-colors rounded-md my-1"
+              style={{ cursor: "default", width: "42px" }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = "#e81123";
                 e.currentTarget.style.color = "white";

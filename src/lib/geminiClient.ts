@@ -203,6 +203,40 @@ export function buildPayload(
         },
       },
       {
+        name: "rename_file",
+        description:
+          "Rename or move a file or folder in the workspace. Use this when asked to rename, move, or reorganize files.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            old_path: {
+              type: "STRING",
+              description: "Current relative path of the file or folder to rename.",
+            },
+            new_path: {
+              type: "STRING",
+              description: "New relative path or name for the file or folder.",
+            },
+          },
+          required: ["old_path", "new_path"],
+        },
+      },
+      {
+        name: "delete_file",
+        description:
+          "Delete a file or folder in the workspace. Path must be relative to the workspace root.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            file_path: {
+              type: "STRING",
+              description: "Relative path of the file or folder to delete.",
+            },
+          },
+          required: ["file_path"],
+        },
+      },
+      {
         name: "create_safety_backup",
         description:
           "Manually refresh the safety backup folder of the entire workspace with '__BACKUP_FOLDER' appended.",
@@ -249,7 +283,20 @@ export function buildPayload(
   }
 
   if (agentWorkspace) {
-    const workspaceInstructions = `\n\n[AUTONOMOUS LOCAL FILE AGENT ACTIVE]\nYou are scoped to workspace: "${agentWorkspace}".\nSafety policy: A safety backup folder "${agentWorkspace}__BACKUP_FOLDER" is maintained in the parent folder.\nYou have tools to list_directory, read_file, and write_file. Always use relative paths from the workspace root. Before claiming an edit is complete, verify files by reading or listing them if needed.`;
+    const workspaceInstructions = `\n\n[AUTONOMOUS LOCAL FILE AGENT ACTIVE]
+You are connected to local workspace directory: "${agentWorkspace}".
+Safety policy: A safety backup folder "${agentWorkspace}__BACKUP_FOLDER" is maintained in the parent directory.
+AVAILABLE AGENT TOOLS:
+- list_directory: List files/folders in the workspace.
+- read_file: Read full content of a file.
+- write_file: Create or update file content directly.
+- rename_file: Directly rename or move files/folders in the workspace.
+- delete_file: Delete a file or folder from the workspace.
+
+CRITICAL INSTRUCTIONS:
+1. When asked to rename, move, delete, or modify files, DO NOT write a script (like a .js, .py, or .sh file) to do it. You MUST call the tools (\`rename_file\`, \`delete_file\`, \`write_file\`) directly!
+2. Always use relative paths from the workspace root (e.g. "Screen_01.png" or "subfolder/image.png").
+3. After renaming or modifying files, you can list the directory to verify the operation succeeded before confirming to the user.`;
     finalSystemPrompt = (finalSystemPrompt || "") + workspaceInstructions;
   }
 
@@ -658,6 +705,26 @@ export async function sendMessage(
               });
               toolResult = { success: true, file_path: relPath, bytesWritten: content.length };
               executedToolLogs.push(`✍️ Wrote file \`${relPath}\``);
+            } else if (call.name === "rename_file") {
+              const oldRelPath = call.args?.old_path || "";
+              const newRelPath = call.args?.new_path || "";
+              opts.onToolActivity?.(`Renaming "${oldRelPath}" to "${newRelPath}"...`);
+              await invoke("agent_rename_file", {
+                workspacePath: opts.agentWorkspace,
+                oldRelPath,
+                newRelPath,
+              });
+              toolResult = { success: true, old_path: oldRelPath, new_path: newRelPath };
+              executedToolLogs.push(`🏷️ Renamed \`${oldRelPath}\` ➔ \`${newRelPath}\``);
+            } else if (call.name === "delete_file") {
+              const relPath = call.args?.file_path || "";
+              opts.onToolActivity?.(`Deleting "${relPath}"...`);
+              await invoke("agent_delete_file", {
+                workspacePath: opts.agentWorkspace,
+                relPath,
+              });
+              toolResult = { success: true, file_path: relPath };
+              executedToolLogs.push(`🗑️ Deleted \`${relPath}\``);
             } else if (call.name === "create_safety_backup") {
               opts.onToolActivity?.("Creating safety backup...");
               const backupPath = await invoke<string>("agent_create_backup", {

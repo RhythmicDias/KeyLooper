@@ -89,16 +89,30 @@
 /* ─── Base ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body, #root {
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: transparent !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  font-family: 'Crimson Pro', Georgia, serif;
-  background-color: var(--bg-color);
-  background-image: var(--bg-image);
-  color: var(--text-color);
-  -webkit-font-smoothing: antialiased;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Smooth macOS rounded window frame */
+.macos-window-frame {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-color);
 }
 
 /* ─── Typography helpers ────────────────────────────────── */

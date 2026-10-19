@@ -269,6 +269,49 @@ fn agent_write_file(
 }
 
 #[tauri::command]
+fn agent_rename_file(
+    workspace_path: String,
+    old_rel_path: String,
+    new_rel_path: String,
+) -> Result<(), String> {
+    let src = validate_and_resolve_path(&workspace_path, &old_rel_path)?;
+    let dst = validate_and_resolve_path(&workspace_path, &new_rel_path)?;
+
+    if !src.exists() {
+        return Err(format!("Source path '{}' does not exist.", old_rel_path));
+    }
+
+    if let Some(parent) = dst.parent() {
+        if !parent.exists() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("Failed to create destination directories: {}", e))?;
+        }
+    }
+
+    std::fs::rename(&src, &dst)
+        .map_err(|e| format!("Failed to rename '{}' to '{}': {}", old_rel_path, new_rel_path, e))
+}
+
+#[tauri::command]
+fn agent_delete_file(
+    workspace_path: String,
+    rel_path: String,
+) -> Result<(), String> {
+    let target = validate_and_resolve_path(&workspace_path, &rel_path)?;
+    if !target.exists() {
+        return Err(format!("Path '{}' does not exist.", rel_path));
+    }
+
+    if target.is_dir() {
+        std::fs::remove_dir_all(&target)
+            .map_err(|e| format!("Failed to delete directory '{}': {}", rel_path, e))
+    } else {
+        std::fs::remove_file(&target)
+            .map_err(|e| format!("Failed to delete file '{}': {}", rel_path, e))
+    }
+}
+
+#[tauri::command]
 fn agent_restore_backup(workspace_path: String) -> Result<String, String> {
     let ws_path = std::path::Path::new(&workspace_path);
     if !ws_path.is_dir() {
@@ -391,6 +434,8 @@ pub fn run() {
             agent_list_directory,
             agent_read_file,
             agent_write_file,
+            agent_rename_file,
+            agent_delete_file,
             agent_restore_backup,
             open_gemini_web_window
         ])

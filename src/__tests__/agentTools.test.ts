@@ -23,6 +23,8 @@ describe("Autonomous Local File Agent Payload", () => {
     expect(toolNames).toContain("list_directory");
     expect(toolNames).toContain("read_file");
     expect(toolNames).toContain("write_file");
+    expect(toolNames).toContain("rename_file");
+    expect(toolNames).toContain("delete_file");
     expect(toolNames).toContain("create_safety_backup");
     expect(toolNames).toContain("restore_backup");
   });
