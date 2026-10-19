@@ -2221,7 +2221,7 @@ const SettingsView: React.FC = () => {
                       border: "1px solid rgba(177,98,77,0.25)",
                     }}
                   >
-                    v0.2.0
+                    v0.2.1
                   </span>
                 </div>
                 <p
@@ -2509,7 +2509,7 @@ const SettingsView: React.FC = () => {
                         color: "var(--primary)",
                       }}
                     >
-                      v0.2.0
+                      v0.2.1
                     </span>
                   </div>
                   <p style={{ margin: 0, fontSize: "12px", color: "var(--text-color-muted)" }}>
@@ -2564,7 +2564,7 @@ const SettingsView: React.FC = () => {
                 }}
               >
                 <Icon name="check_circle" size={18} style={{ color: "#6b8a7a" }} />
-                <span><strong>KeyLooper is up to date!</strong> You are running the latest version (v0.2.0).</span>
+                <span><strong>KeyLooper is up to date!</strong> You are running the latest version (v0.2.1).</span>
               </div>
             )}
 
