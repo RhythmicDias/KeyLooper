@@ -115,13 +115,17 @@
 
     /* ─── Scroll-Driven Reveal Utilities ─── */
     .reveal-on-scroll {
-      opacity: 0;
-      transform: translateY(24px);
-      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-      will-change: opacity, transform;
+      opacity: 1;
+      transform: none;
+      transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    .reveal-on-scroll.is-visible {
+    html.js-enhanced .reveal-on-scroll {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    html.js-enhanced .reveal-on-scroll.is-visible {
       opacity: 1;
       transform: translateY(0);
     }
@@ -1119,91 +1123,99 @@
 
   <!-- Minimal Smooth Scroll & Interactive Image Switcher (Zero external libraries) -->
   <script>
-    // ─── Theme Toggle ───
-    const themeBtn = document.getElementById('themeToggleBtn');
-    const sunIcon = document.getElementById('themeIconSun');
-    const moonIcon = document.getElementById('themeIconMoon');
-    const showcaseImg = document.getElementById('showcaseImage');
-    const windowTitleText = document.getElementById('windowTitleText');
+    document.addEventListener('DOMContentLoaded', () => {
+      // Enable scroll animations progressively
+      document.documentElement.classList.add('js-enhanced');
 
-    function applyTheme(theme) {
-      document.documentElement.setAttribute('data-theme', theme);
-      localStorage.setItem('keylooper_web_theme', theme);
-      if (theme === 'dark') {
-        sunIcon.style.display = 'none';
-        moonIcon.style.display = 'block';
-        // Auto-switch showcase to dark theme if currently viewing day workspace
-        if (showcaseImg && showcaseImg.src.includes('chat-lite-theme.png')) {
-          setTabActive('img/chat-dark-theme.png', 'KeyLooper — Night Workspace');
-        }
-      } else {
-        sunIcon.style.display = 'block';
-        moonIcon.style.display = 'none';
-        if (showcaseImg && showcaseImg.src.includes('chat-dark-theme.png')) {
-          setTabActive('img/chat-lite-theme.png', 'KeyLooper — Day Workspace');
-        }
-      }
-    }
+      // ─── Interactive Showcase Tabs ───
+      const tabButtons = document.querySelectorAll('.showcase-tab-btn');
+      const showcaseImg = document.getElementById('showcaseImage');
+      const windowTitleText = document.getElementById('windowTitleText');
 
-    const savedTheme = localStorage.getItem('keylooper_web_theme') || 
-      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    applyTheme(savedTheme);
-
-    themeBtn.addEventListener('click', () => {
-      const cur = document.documentElement.getAttribute('data-theme');
-      applyTheme(cur === 'dark' ? 'light' : 'dark');
-    });
-
-    // ─── Interactive Showcase Tabs ───
-    const tabButtons = document.querySelectorAll('.showcase-tab-btn');
-    function setTabActive(imgSrc, title) {
-      tabButtons.forEach(b => {
-        if (b.getAttribute('data-img') === imgSrc) {
-          b.classList.add('active');
-        } else {
-          b.classList.remove('active');
-        }
-      });
-      if (showcaseImg) {
-        showcaseImg.style.opacity = '0';
-        setTimeout(() => {
-          showcaseImg.src = imgSrc;
-          showcaseImg.onload = () => { showcaseImg.style.opacity = '1'; };
-        }, 150);
-      }
-      if (windowTitleText) {
-        windowTitleText.textContent = title;
-      }
-    }
-
-    tabButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const src = btn.getAttribute('data-img');
-        const title = 'KeyLooper — ' + btn.textContent.trim();
-        setTabActive(src, title);
-      });
-    });
-
-    // ─── Smooth Lightweight Scroll Reveal (IntersectionObserver) ───
-    const revealElements = document.querySelectorAll('.reveal-on-scroll');
-    if ('IntersectionObserver' in window) {
-      const observer = new IntersectionObserver((entries, obs) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-visible');
-            obs.unobserve(entry.target);
+      function setTabActive(imgSrc, title) {
+        tabButtons.forEach(b => {
+          if (b.getAttribute('data-img') === imgSrc) {
+            b.classList.add('active');
+          } else {
+            b.classList.remove('active');
           }
         });
-      }, {
-        threshold: 0.12,
-        rootMargin: '0px 0px -40px 0px'
+        if (showcaseImg) {
+          showcaseImg.style.opacity = '0';
+          setTimeout(() => {
+            showcaseImg.src = imgSrc;
+            showcaseImg.onload = () => { showcaseImg.style.opacity = '1'; };
+          }, 150);
+        }
+        if (windowTitleText && title) {
+          windowTitleText.textContent = title;
+        }
+      }
+
+      tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const src = btn.getAttribute('data-img');
+          const title = 'KeyLooper — ' + btn.textContent.trim();
+          setTabActive(src, title);
+        });
       });
 
-      revealElements.forEach(el => observer.observe(el));
-    } else {
-      // Fallback for older browsers
-      revealElements.forEach(el => el.classList.add('is-visible'));
-    }
+      // ─── Theme Toggle ───
+      const themeBtn = document.getElementById('themeToggleBtn');
+      const sunIcon = document.getElementById('themeIconSun');
+      const moonIcon = document.getElementById('themeIconMoon');
+
+      function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        try { localStorage.setItem('keylooper_web_theme', theme); } catch (e) {}
+        if (theme === 'dark') {
+          if (sunIcon) sunIcon.style.display = 'none';
+          if (moonIcon) moonIcon.style.display = 'block';
+          if (showcaseImg && showcaseImg.src.includes('chat-lite-theme.png')) {
+            setTabActive('img/chat-dark-theme.png', 'KeyLooper — Night Workspace');
+          }
+        } else {
+          if (sunIcon) sunIcon.style.display = 'block';
+          if (moonIcon) moonIcon.style.display = 'none';
+          if (showcaseImg && showcaseImg.src.includes('chat-dark-theme.png')) {
+            setTabActive('img/chat-lite-theme.png', 'KeyLooper — Day Workspace');
+          }
+        }
+      }
+
+      let savedTheme = 'dark';
+      try {
+        savedTheme = localStorage.getItem('keylooper_web_theme') ||
+          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      } catch (e) {}
+      applyTheme(savedTheme);
+
+      if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+          const cur = document.documentElement.getAttribute('data-theme');
+          applyTheme(cur === 'dark' ? 'light' : 'dark');
+        });
+      }
+
+      // ─── Smooth Lightweight Scroll Reveal (IntersectionObserver) ───
+      const revealElements = document.querySelectorAll('.reveal-on-scroll');
+      if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries, obs) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              obs.unobserve(entry.target);
+            }
+          });
+        }, {
+          threshold: 0.05
+        });
+
+        revealElements.forEach(el => observer.observe(el));
+      } else {
+        revealElements.forEach(el => el.classList.add('is-visible'));
+      }
+    });
 
     // ─── Dynamic GitHub Release Assets Auto-Resolver ───
     (async function resolveLatestRelease() {
