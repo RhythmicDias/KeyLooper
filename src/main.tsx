@@ -8,10 +8,12 @@ import "./styles/globals.css";
   let menu: HTMLDivElement | null = null;
 
   const dismiss = () => {
-    if (menu) { menu.remove(); menu = null; }
+    if (menu) {
+      menu.remove();
+      menu = null;
+    }
   };
 
-  /** Is the target a text-interactive area where copy/paste makes sense? */
   const isTextArea = (el: HTMLElement): boolean => {
     const tag = el.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA") return true;
@@ -26,56 +28,109 @@ import "./styles/globals.css";
     return tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable;
   };
 
+  /** Update a React-controlled input/textarea value at selection range and trigger React onChange. */
+  const replaceEditableSelection = (
+    el: HTMLInputElement | HTMLTextAreaElement,
+    replacement: string
+  ) => {
+    const start = el.selectionStart ?? el.value.length;
+    const end = el.selectionEnd ?? el.value.length;
+    const nextValue = el.value.slice(0, start) + replacement + el.value.slice(end);
+    const proto =
+      el.tagName === "TEXTAREA"
+        ? window.HTMLTextAreaElement.prototype
+        : window.HTMLInputElement.prototype;
+    const nativeSetter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
+    if (nativeSetter) {
+      nativeSetter.call(el, nextValue);
+    } else {
+      el.value = nextValue;
+    }
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    const cursor = start + replacement.length;
+    el.setSelectionRange(cursor, cursor);
+  };
+
   document.addEventListener("contextmenu", (e) => {
     e.preventDefault();
     dismiss();
 
     const target = e.target as HTMLElement;
-    if (!isTextArea(target)) return; // no menu on non-text areas
+    if (!isTextArea(target)) return;
 
     const editable = isEditable(target);
-    const hasSelection = !!window.getSelection()?.toString();
+    const selectedText = window.getSelection()?.toString() || "";
+    const hasSelection = selectedText.length > 0;
 
-    // Build menu items
-    const items: { label: string; shortcut: string; action: () => void; disabled: boolean }[] = [
+    const items: {
+      label: string;
+      shortcut: string;
+      action: () => void;
+      disabled: boolean;
+    }[] = [
       {
-        label: "Undo", shortcut: "Ctrl+Z", disabled: !editable,
-        action: () => document.execCommand("undo"),
-      },
-      {
-        label: "Cut", shortcut: "Ctrl+X", disabled: !editable || !hasSelection,
-        action: () => document.execCommand("cut"),
-      },
-      {
-        label: "Copy", shortcut: "Ctrl+C", disabled: !hasSelection,
-        action: () => document.execCommand("copy"),
-      },
-      {
-        label: "Paste", shortcut: "Ctrl+V", disabled: !editable,
+        label: "Cut",
+        shortcut: "Ctrl+X",
+        disabled: !editable || !hasSelection,
         action: async () => {
-          try {
-            const text = await navigator.clipboard.readText();
-            document.execCommand("insertText", false, text);
-          } catch { document.execCommand("paste"); }
+          if (!selectedText) return;
+          await navigator.clipboard.writeText(selectedText);
+          if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") {
+            replaceEditableSelection(
+              target as HTMLInputElement | HTMLTextAreaElement,
+              ""
+            );
+          }
         },
       },
       {
-        label: "Select All", shortcut: "Ctrl+A", disabled: false,
+        label: "Copy",
+        shortcut: "Ctrl+C",
+        disabled: !hasSelection,
+        action: async () => {
+          if (selectedText) {
+            await navigator.clipboard.writeText(selectedText);
+          }
+        },
+      },
+      {
+        label: "Paste",
+        shortcut: "Ctrl+V",
+        disabled: !editable,
+        action: async () => {
+          try {
+            const clipText = await navigator.clipboard.readText();
+            if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") {
+              replaceEditableSelection(
+                target as HTMLInputElement | HTMLTextAreaElement,
+                clipText
+              );
+            }
+          } catch {}
+        },
+      },
+      {
+        label: "Select All",
+        shortcut: "Ctrl+A",
+        disabled: false,
         action: () => {
-          if (editable) {
-            (target as HTMLInputElement).select?.();
+          if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") {
+            (target as HTMLInputElement).select();
           } else {
-            document.execCommand("selectAll");
+            const range = document.createRange();
+            range.selectNodeContents(target);
+            const sel = window.getSelection();
+            sel?.removeAllRanges();
+            sel?.addRange(range);
           }
         },
       },
     ];
 
-    // Create menu DOM
     menu = document.createElement("div");
     menu.style.cssText = `
       position:fixed; z-index:99999;
-      min-width:180px; padding:4px 0;
+      min-width:170px; padding:4px 0;
       background:var(--bg-color, #fff); border:1px solid var(--border-color, #ddd);
       border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.18);
       font-family:'Crimson Pro',serif; font-size:14px;
@@ -83,17 +138,17 @@ import "./styles/globals.css";
     `;
 
     items.forEach((item, i) => {
-      // Separator after Undo
-      if (i === 1) {
+      if (i === 3) {
         const sep = document.createElement("div");
-        sep.style.cssText = "height:1px; margin:4px 8px; background:var(--border-color, #ddd);";
+        sep.style.cssText =
+          "height:1px; margin:4px 8px; background:var(--border-color, #ddd);";
         menu!.appendChild(sep);
       }
 
       const row = document.createElement("div");
       row.style.cssText = `
         display:flex; align-items:center; justify-content:space-between;
-        padding:6px 16px; cursor:${item.disabled ? "default" : "pointer"};
+        padding:6px 14px; cursor:${item.disabled ? "default" : "pointer"};
         opacity:${item.disabled ? "0.35" : "1"};
         transition:background 0.1s;
       `;
@@ -103,9 +158,17 @@ import "./styles/globals.css";
       `;
 
       if (!item.disabled) {
-        row.addEventListener("mouseenter", () => { row.style.background = "var(--input-bg, #f5f5f5)"; });
-        row.addEventListener("mouseleave", () => { row.style.background = "transparent"; });
-        row.addEventListener("click", () => { dismiss(); target.focus(); item.action(); });
+        row.addEventListener("mouseenter", () => {
+          row.style.background = "var(--input-bg, #f5f5f5)";
+        });
+        row.addEventListener("mouseleave", () => {
+          row.style.background = "transparent";
+        });
+        row.addEventListener("click", () => {
+          dismiss();
+          target.focus();
+          item.action();
+        });
       }
 
       menu!.appendChild(row);
@@ -113,11 +176,13 @@ import "./styles/globals.css";
 
     document.body.appendChild(menu);
 
-    // Position: keep within viewport
     const rect = menu.getBoundingClientRect();
-    let x = e.clientX, y = e.clientY;
-    if (x + rect.width > window.innerWidth) x = window.innerWidth - rect.width - 4;
-    if (y + rect.height > window.innerHeight) y = window.innerHeight - rect.height - 4;
+    let x = e.clientX,
+      y = e.clientY;
+    if (x + rect.width > window.innerWidth)
+      x = window.innerWidth - rect.width - 4;
+    if (y + rect.height > window.innerHeight)
+      y = window.innerHeight - rect.height - 4;
     menu.style.left = `${x}px`;
     menu.style.top = `${y}px`;
   });

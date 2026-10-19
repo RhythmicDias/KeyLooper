@@ -18,7 +18,7 @@ export class KeyRotator {
   private currentIndex: number = 0;
 
   constructor(keys: ApiKeyEntry[]) {
-    this.keys = keys;
+    this.keys = keys.map((k) => ({ ...k }));
   }
 
   getCurrentIndex(): number {

@@ -4,7 +4,7 @@
   color-scheme: light;
   /* ── Day (Light) Mode Variables ── */
   --bg-color: #f8f5f1;
-  --bg-image: url("https://www.transparenttextures.com/patterns/paper-fibers.png");
+  --bg-image: none;
   --text-color: #433e3a;
   --text-color-muted: #6e6761;
   --primary: #b1624d;

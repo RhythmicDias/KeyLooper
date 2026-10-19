@@ -29,14 +29,22 @@
 
 ---
 
-## Keyboard Shortcuts
+## Keyboard Shortcuts (Fully Customizable in Settings)
 
-| Shortcut (Windows) | Shortcut (macOS) | Action |
+| Default Shortcut (Win) | Default Shortcut (macOS) | Action |
 |---|---|---|
-| `Ctrl + Enter` | `Cmd + Enter` | Send message |
-| `Ctrl + Shift + N` | `Cmd + Shift + N` | New chat session |
+| `Enter` / `Ctrl + Enter` | `Enter` / `Cmd + Enter` | Send message |
+| `Ctrl + N` | `Cmd + N` | New chat session |
+| `Ctrl + H` | `Cmd + H` | Toggle History side panel |
+| `Ctrl + ,` | `Cmd + ,` | Open / close Settings |
+| `Alt + A` | `Option + A` | Open Agents & Skills |
 | `Ctrl + Shift + D` | `Cmd + Shift + D` | Toggle Dark / Light mode |
-| `Ctrl + ,` | `Cmd + ,` | Open Settings |
+| `Ctrl + B` | `Cmd + B` | Show / hide bottom dock |
+| `Alt + M` | `Option + M` | Toggle voice dictation |
+| `Alt + G` | `Option + G` | Select active model |
+| `Ctrl + Shift + M` | `Cmd + Shift + M` | Cycle routing mode (Normal / Unlimited / Pro) |
+| `Ctrl + L` | `Cmd + L` | Clear active chat messages |
+| `Ctrl + /` | `Cmd + /` | Focus chat input |
 
 ---
 

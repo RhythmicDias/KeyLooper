@@ -1,21 +1,40 @@
 import React, { useState } from "react";
-import { useAppStore, ModelConfig, selectAvailableModels } from "../store/useAppStore";
+import {
+  useAppStore,
+  ModelConfig,
+  DEFAULT_MODEL_CONFIG,
+  selectAvailableModels,
+} from "../store/useAppStore";
 
-const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void }> = ({ checked, onChange }) => (
+const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void }> = ({
+  checked,
+  onChange,
+}) => (
   <button
+    type="button"
     onClick={() => onChange(!checked)}
     style={{
-      width: "36px", height: "20px", borderRadius: "10px",
+      width: "34px",
+      height: "18px",
+      borderRadius: "999px",
       background: checked ? "var(--primary)" : "var(--border-color)",
-      position: "relative", border: "none", cursor: "pointer",
-      transition: "background 0.2s"
+      position: "relative",
+      border: "none",
+      cursor: "pointer",
+      transition: "background 0.2s",
+      flexShrink: 0,
     }}
   >
     <div
       style={{
-        width: "16px", height: "16px", borderRadius: "50%",
-        background: "var(--bg-color)", position: "absolute", top: "2px",
-        left: checked ? "18px" : "2px", transition: "left 0.2s"
+        width: "14px",
+        height: "14px",
+        borderRadius: "50%",
+        background: "#fff",
+        position: "absolute",
+        top: "2px",
+        left: checked ? "18px" : "2px",
+        transition: "left 0.2s",
       }}
     />
   </button>
@@ -28,8 +47,10 @@ export const ModelConfigPanel: React.FC = () => {
   const updateModelConfig = useAppStore((s) => s.updateModelConfig);
   const availableModels = useAppStore(selectAvailableModels);
   const customModels = useAppStore((s) => s.customModels);
+  const deletedModels = useAppStore((s) => s.deletedModels);
   const addCustomModel = useAppStore((s) => s.addCustomModel);
   const deleteModel = useAppStore((s) => s.deleteModel);
+  const restoreDefaultsModels = useAppStore((s) => s.restoreDefaultsModels);
 
   const [newModelInput, setNewModelInput] = useState("");
 
@@ -48,317 +69,496 @@ export const ModelConfigPanel: React.FC = () => {
       alert("Cannot delete the only available model.");
       return;
     }
-
-    if (confirm(`Remove model "${modelName}" from active models list?`)) {
-      deleteModel(modelName);
-      if (selectedModel === modelName) {
-        setModel(nextAvailable);
-      }
+    deleteModel(modelName);
+    if (selectedModel === modelName) {
+      setModel(nextAvailable);
     }
   };
 
-  const config = modelConfigs[selectedModel] || {
-    systemInstructions: "",
-    thinkingLevel: "Medium",
+  const rawConfig = modelConfigs[selectedModel];
+  const config: ModelConfig = {
+    ...DEFAULT_MODEL_CONFIG,
+    ...rawConfig,
     tools: {
-      structuredOutputs: false,
-      codeExecution: false,
-      functionCalling: false,
-      groundingGoogleSearch: false,
-      groundingGoogleMaps: false,
-      urlContext: false,
+      ...DEFAULT_MODEL_CONFIG.tools,
+      ...(rawConfig?.tools || {}),
     },
     advanced: {
-      mediaResolution: "Default",
-      safetySettings: "Block Some",
-      stopSequences: "",
-      outputLength: 8192,
+      ...DEFAULT_MODEL_CONFIG.advanced,
+      ...(rawConfig?.advanced || {}),
     },
   };
 
   const updateTool = (key: keyof ModelConfig["tools"], value: boolean) => {
-    updateModelConfig(selectedModel, { tools: { ...config.tools, [key]: value } });
+    updateModelConfig(selectedModel, {
+      tools: { ...config.tools, [key]: value },
+    });
   };
 
   const updateAdvanced = (key: keyof ModelConfig["advanced"], value: any) => {
-    updateModelConfig(selectedModel, { advanced: { ...config.advanced, [key]: value } });
+    updateModelConfig(selectedModel, {
+      advanced: { ...config.advanced, [key]: value },
+    });
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", paddingBottom: "40px" }} className="fade-in">
-      
-      {/* Add New Custom Model Card Section */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px", padding: "20px", background: "var(--input-bg)", borderRadius: "16px", border: "1px solid var(--border-color)" }}>
-        <div>
-          <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-color)", margin: "0 0 2px 0" }}>
-            Add New Model Endpoint
-          </h3>
-          <p style={{ fontSize: "13px", color: "var(--text-color-muted)", margin: 0 }}>
-            Register new or custom Gemini model identifiers (e.g. newly released models or experimental endpoints).
-          </p>
-        </div>
-        <form onSubmit={handleAddCustomModel} style={{ display: "flex", gap: "8px" }}>
-          <input
-            type="text"
-            placeholder="e.g. gemini-3.5-pro or gemini-experimental-0301"
-            value={newModelInput}
-            onChange={(e) => setNewModelInput(e.target.value)}
-            style={{
-              flex: 1, padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-color)",
-              background: "var(--bg-color)", color: "var(--text-color)", fontSize: "13px", outline: "none"
-            }}
-          />
-          <button
-            type="submit"
-            disabled={!newModelInput.trim()}
-            style={{
-              padding: "8px 16px", background: "var(--primary)", color: "white", borderRadius: "8px",
-              fontSize: "13px", fontWeight: 600, border: "none", cursor: newModelInput.trim() ? "pointer" : "not-allowed",
-              opacity: newModelInput.trim() ? 1 : 0.5, display: "flex", alignItems: "center", gap: "6px"
-            }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>add</span>
-            Add Model
-          </button>
-        </form>
-      </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }} className="fade-in">
+      {/* Models Bar & Compact Selector Grid */}
+      <div
+        style={{
+          padding: "14px 16px",
+          background: "var(--input-bg)",
+          borderRadius: "12px",
+          border: "1px solid var(--border-color)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <h3 style={{ fontSize: "14.5px", fontWeight: 700, color: "var(--text-color)", margin: 0 }}>
+              Active & Custom Models ({availableModels.length})
+            </h3>
+            <p style={{ fontSize: "12px", color: "var(--text-color-muted)", margin: 0 }}>
+              Click a model to select and configure its parameters below.
+            </p>
+          </div>
 
-      {/* Available Models Cards Gallery */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px", padding: "20px", background: "var(--input-bg)", borderRadius: "16px", border: "1px solid var(--border-color)" }}>
-        <div>
-          <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-color)", margin: "0 0 2px 0" }}>
-            Available Model Cards ({availableModels.length})
-          </h3>
-          <p style={{ fontSize: "13px", color: "var(--text-color-muted)", margin: 0 }}>
-            Select a model card to configure its specific tools, reasoning level, and system parameters below.
-          </p>
+          <form onSubmit={handleAddCustomModel} style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <input
+              type="text"
+              placeholder="Add model ID (e.g. gemini-2.5-pro)"
+              value={newModelInput}
+              onChange={(e) => setNewModelInput(e.target.value)}
+              style={{
+                width: "210px",
+                padding: "5px 10px",
+                borderRadius: "7px",
+                border: "1px solid var(--border-color)",
+                background: "var(--bg-color)",
+                color: "var(--text-color)",
+                fontSize: "12px",
+                fontFamily: "'JetBrains Mono', monospace",
+                outline: "none",
+              }}
+            />
+            <button
+              type="submit"
+              disabled={!newModelInput.trim()}
+              style={{
+                padding: "5px 11px",
+                background: "var(--primary)",
+                color: "white",
+                borderRadius: "7px",
+                fontSize: "12px",
+                fontWeight: 600,
+                border: "none",
+                cursor: newModelInput.trim() ? "pointer" : "not-allowed",
+                opacity: newModelInput.trim() ? 1 : 0.5,
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>
+                add
+              </span>
+              Add
+            </button>
+            {deletedModels.length > 0 && (
+              <button
+                type="button"
+                onClick={restoreDefaultsModels}
+                title="Restore hidden built-in models"
+                style={{
+                  padding: "5px 9px",
+                  background: "var(--bg-color)",
+                  color: "var(--text-color-muted)",
+                  borderRadius: "7px",
+                  fontSize: "11px",
+                  border: "1px solid var(--border-color)",
+                  cursor: "pointer",
+                }}
+              >
+                Restore ({deletedModels.length})
+              </button>
+            )}
+          </form>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "12px", marginTop: "4px" }}>
+        {/* Compact Model Pills Grid */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(185px, 1fr))",
+            gap: "8px",
+          }}
+        >
           {availableModels.map((m) => {
             const isSelected = selectedModel === m;
             const isCustom = customModels.includes(m);
-            const mConfig = modelConfigs[m];
-            const activeToolCount = mConfig ? Object.values(mConfig.tools).filter(Boolean).length : 0;
-
             return (
               <div
                 key={m}
                 onClick={() => setModel(m)}
                 style={{
                   display: "flex",
-                  flexDirection: "column",
+                  alignItems: "center",
                   justifyContent: "space-between",
-                  padding: "12px 14px",
-                  borderRadius: "12px",
-                  border: isSelected ? "2px solid var(--primary)" : "1px solid var(--border-color)",
-                  background: isSelected ? "var(--input-bg)" : "var(--bg-color)",
+                  padding: "8px 10px",
+                  borderRadius: "9px",
+                  border: isSelected
+                    ? "1.5px solid var(--primary)"
+                    : "1px solid var(--border-color)",
+                  background: isSelected ? "var(--bg-color)" : "transparent",
                   cursor: "pointer",
-                  transition: "all 0.15s ease-in-out",
-                  position: "relative",
-                  boxShadow: isSelected ? "0 2px 8px rgba(0,0,0,0.08)" : "none"
+                  gap: "6px",
                 }}
               >
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", marginBottom: "6px" }}>
-                    <span style={{ fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", padding: "2px 6px", borderRadius: "4px", background: isCustom ? "rgba(177,98,77,0.15)" : "var(--input-bg)", color: isCustom ? "var(--primary)" : "var(--text-color-muted)", border: "1px solid var(--border-color)", fontWeight: 600 }}>
-                      {isCustom ? "CUSTOM" : "BUILT-IN"}
-                    </span>
-                    {isSelected && (
-                      <span style={{ fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", padding: "2px 6px", borderRadius: "4px", background: "var(--primary)", color: "white", fontWeight: 700 }}>
-                        ACTIVE
-                      </span>
-                    )}
-                  </div>
-                  <h4 style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-color)", margin: "4px 0", wordBreak: "break-word" }}>
-                    {m}
-                  </h4>
-                  <p style={{ fontSize: "11px", color: "var(--text-color-muted)", margin: 0, fontFamily: "'JetBrains Mono', monospace" }}>
-                    {activeToolCount > 0 ? `${activeToolCount} tools active` : "Standard capabilities"}
-                  </p>
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "12px", paddingTop: "8px", borderTop: "1px solid var(--border-color)" }}>
-                  <span style={{ fontSize: "11px", color: isSelected ? "var(--primary)" : "var(--text-color-muted)", fontWeight: 500 }}>
-                    {isSelected ? "Currently Selected" : "Click to Select"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); handleRemoveModel(m); }}
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div
                     style={{
-                      border: "none",
-                      background: "transparent",
-                      color: "var(--text-color-muted)",
-                      cursor: "pointer",
-                      display: "flex",
-                      padding: "4px",
-                      borderRadius: "6px",
-                      transition: "color 0.15s, background 0.15s"
+                      fontSize: "12.5px",
+                      fontWeight: isSelected ? 700 : 500,
+                      color: isSelected ? "var(--primary)" : "var(--text-color)",
+                      fontFamily: "'JetBrains Mono', monospace",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = "#ba1a1a";
-                      e.currentTarget.style.background = "rgba(186, 26, 26, 0.1)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = "var(--text-color-muted)";
-                      e.currentTarget.style.background = "transparent";
-                    }}
-                    title={`Delete/Hide model ${m}`}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>delete</span>
-                  </button>
+                    {m}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "10px",
+                      color: "var(--text-color-muted)",
+                      display: "flex",
+                      gap: "6px",
+                    }}
+                  >
+                    <span>{isCustom ? "Custom" : "Built-in"}</span>
+                    {isSelected && <span style={{ color: "var(--primary)", fontWeight: 600 }}>• Active</span>}
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveModel(m);
+                  }}
+                  title={`Remove ${m}`}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    color: "var(--text-color-muted)",
+                    cursor: "pointer",
+                    padding: "2px",
+                    display: "flex",
+                    borderRadius: "4px",
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>
+                    close
+                  </span>
+                </button>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Active Model Indicator */}
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", borderRadius: "12px", background: "var(--input-bg)", border: "1px solid var(--border-color)" }}>
-        <span className="material-symbols-outlined" style={{ fontSize: "20px", color: "var(--primary)" }}>tune</span>
-        <span style={{ fontSize: "14px", color: "var(--text-color)" }}>
-          Configuring settings for active model: <strong style={{ color: "var(--primary)", fontFamily: "'JetBrains Mono', monospace" }}>{selectedModel}</strong>
-        </span>
-      </div>
-
-      {/* System Instructions & Thinking Level Card */}
-      <div style={{ padding: "20px", background: "var(--input-bg)", borderRadius: "16px", border: "1px solid var(--border-color)", display: "flex", flexDirection: "column", gap: "16px" }}>
-        <div>
-          <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-color)", margin: "0 0 2px 0" }}>System Instructions & Tone</h3>
-          <p style={{ fontSize: "13px", color: "var(--text-color-muted)", margin: 0 }}>
-            Provide custom instructions or target persona guidance for response formatting.
-          </p>
+      {/* Parameters & System Instructions for Selected Model */}
+      <div
+        style={{
+          padding: "14px 16px",
+          background: "var(--input-bg)",
+          borderRadius: "12px",
+          border: "1px solid var(--border-color)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "12px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span className="material-symbols-outlined" style={{ fontSize: "17px", color: "var(--primary)" }}>
+              tune
+            </span>
+            <span style={{ fontSize: "13.5px", fontWeight: 700, color: "var(--text-color)" }}>
+              Configuration for{" "}
+              <code style={{ color: "var(--primary)", fontFamily: "'JetBrains Mono', monospace", fontSize: "12.5px" }}>
+                {selectedModel}
+              </code>
+            </span>
+          </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "var(--text-color-muted)" }}>SYSTEM INSTRUCTIONS</label>
+        {/* System Instructions */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <label
+            style={{
+              fontSize: "10.5px",
+              fontFamily: "'JetBrains Mono', monospace",
+              color: "var(--text-color-muted)",
+            }}
+          >
+            SYSTEM INSTRUCTIONS (DEFAULT PERSONA)
+          </label>
           <textarea
             value={config.systemInstructions}
-            onChange={(e) => updateModelConfig(selectedModel, { systemInstructions: e.target.value })}
-            placeholder="Optional instructions for tone, format, or knowledge boundaries..."
-            rows={3}
+            onChange={(e) =>
+              updateModelConfig(selectedModel, { systemInstructions: e.target.value })
+            }
+            placeholder="Optional default system instructions for this model..."
+            rows={2}
             style={{
-              padding: "10px 12px", borderRadius: "8px", border: "1px solid var(--border-color)",
-              background: "var(--bg-color)", color: "var(--text-color)", fontSize: "13px", outline: "none",
-              resize: "vertical", width: "100%", fontFamily: "inherit"
+              padding: "7px 10px",
+              borderRadius: "8px",
+              border: "1px solid var(--border-color)",
+              background: "var(--bg-color)",
+              color: "var(--text-color)",
+              fontSize: "13px",
+              outline: "none",
+              resize: "vertical",
+              width: "100%",
+              fontFamily: "inherit",
             }}
           />
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", borderTop: "1px solid var(--border-color)", paddingTop: "14px" }}>
-          <div>
-            <h4 style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-color)", margin: "0 0 2px 0" }}>Thinking Level</h4>
-            <p style={{ fontSize: "12px", color: "var(--text-color-muted)", margin: 0 }}>Reasoning depth allocation for model execution</p>
-          </div>
-          <select
-            value={config.thinkingLevel}
-            onChange={(e) => updateModelConfig(selectedModel, { thinkingLevel: e.target.value as any })}
-            style={{
-              padding: "6px 12px", borderRadius: "8px", border: "1px solid var(--border-color)",
-              background: "var(--bg-color)", color: "var(--text-color)", fontSize: "13px", outline: "none"
-            }}
-          >
-            <option value="Low">Low</option>
-            <option value="Medium">Medium</option>
-            <option value="High">High</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Capabilities & Tools Card */}
-      <div style={{ padding: "20px", background: "var(--input-bg)", borderRadius: "16px", border: "1px solid var(--border-color)", display: "flex", flexDirection: "column", gap: "16px" }}>
-        <div>
-          <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-color)", margin: "0 0 2px 0" }}>Tools & Capabilities</h3>
-          <p style={{ fontSize: "13px", color: "var(--text-color-muted)", margin: 0 }}>
-            Enable or disable extended Gemini model integrations for <strong style={{ fontFamily: "'JetBrains Mono', monospace" }}>{selectedModel}</strong>.
-          </p>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-          {[
-            { label: "Structured outputs", key: "structuredOutputs" },
-            { label: "Code execution", key: "codeExecution" },
-            { label: "Function calling", key: "functionCalling" },
-            { label: "Grounding (Google Search)", key: "groundingGoogleSearch" },
-            { label: "Grounding (Google Maps)", key: "groundingGoogleMaps" },
-            { label: "URL context", key: "urlContext" },
-          ].map((tool) => (
-            <div key={tool.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderRadius: "8px", border: "1px solid var(--border-color)", background: "var(--bg-color)" }}>
-              <span style={{ fontSize: "13px", color: "var(--text-color)", fontWeight: 500 }}>{tool.label}</span>
-              <Toggle
-                checked={config.tools[tool.key as keyof ModelConfig["tools"]]}
-                onChange={(v) => updateTool(tool.key as keyof ModelConfig["tools"], v)}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Advanced Settings Card */}
-      <div style={{ padding: "20px", background: "var(--input-bg)", borderRadius: "16px", border: "1px solid var(--border-color)", display: "flex", flexDirection: "column", gap: "16px" }}>
-        <div>
-          <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-color)", margin: "0 0 2px 0" }}>Advanced Parameters</h3>
-          <p style={{ fontSize: "13px", color: "var(--text-color-muted)", margin: 0 }}>Fine-tune safety barriers and response constraints for <strong style={{ fontFamily: "'JetBrains Mono', monospace" }}>{selectedModel}</strong>.</p>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <label style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "var(--text-color-muted)" }}>MEDIA RESOLUTION</label>
-            <select
-              value={config.advanced.mediaResolution}
-              onChange={(e) => updateAdvanced("mediaResolution", e.target.value)}
+        {/* 4-column Generation Controls */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+            gap: "10px",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+            <label
               style={{
-                padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-color)",
-                background: "var(--bg-color)", color: "var(--text-color)", fontSize: "13px", outline: "none"
+                fontSize: "10px",
+                fontFamily: "'JetBrains Mono', monospace",
+                color: "var(--text-color-muted)",
               }}
             >
-              <option value="Low">Low</option>
-              <option value="Default">Default</option>
-              <option value="High">High</option>
+              THINKING BUDGET (2.5+)
+            </label>
+            <select
+              value={config.thinkingLevel}
+              onChange={(e) =>
+                updateModelConfig(selectedModel, {
+                  thinkingLevel: e.target.value as ModelConfig["thinkingLevel"],
+                })
+              }
+              style={{
+                padding: "6px 8px",
+                borderRadius: "7px",
+                border: "1px solid var(--border-color)",
+                background: "var(--bg-color)",
+                color: "var(--text-color)",
+                fontSize: "12.5px",
+                outline: "none",
+              }}
+            >
+              <option value="Off">Off (Fastest)</option>
+              <option value="Low">Low (1K tokens)</option>
+              <option value="Medium">Medium (8K tokens)</option>
+              <option value="High">High (24K tokens)</option>
             </select>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <label style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "var(--text-color-muted)" }}>SAFETY SETTINGS</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+            <label
+              style={{
+                fontSize: "10px",
+                fontFamily: "'JetBrains Mono', monospace",
+                color: "var(--text-color-muted)",
+              }}
+            >
+              TEMPERATURE ({(config.temperature ?? 1.0).toFixed(1)})
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="2"
+              step="0.1"
+              value={config.temperature ?? 1.0}
+              onChange={(e) =>
+                updateModelConfig(selectedModel, { temperature: parseFloat(e.target.value) })
+              }
+              style={{ accentColor: "var(--primary)", marginTop: "6px", cursor: "pointer" }}
+            />
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+            <label
+              style={{
+                fontSize: "10px",
+                fontFamily: "'JetBrains Mono', monospace",
+                color: "var(--text-color-muted)",
+              }}
+            >
+              SAFETY FILTER
+            </label>
             <select
               value={config.advanced.safetySettings}
               onChange={(e) => updateAdvanced("safetySettings", e.target.value)}
               style={{
-                padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-color)",
-                background: "var(--bg-color)", color: "var(--text-color)", fontSize: "13px", outline: "none"
+                padding: "6px 8px",
+                borderRadius: "7px",
+                border: "1px solid var(--border-color)",
+                background: "var(--bg-color)",
+                color: "var(--text-color)",
+                fontSize: "12.5px",
+                outline: "none",
               }}
             >
               <option value="Block None">Block None</option>
-              <option value="Block Some">Block Some</option>
-              <option value="Block Most">Block Most</option>
+              <option value="Block Few">Block Few (High Only)</option>
+              <option value="Block Some">Block Some (Default)</option>
+              <option value="Block Most">Block Most (Strict)</option>
             </select>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <label style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "var(--text-color-muted)" }}>STOP SEQUENCE</label>
-            <input
-              type="text"
-              placeholder="e.g. END_TOKEN"
-              value={config.advanced.stopSequences}
-              onChange={(e) => updateAdvanced("stopSequences", e.target.value)}
+          <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+            <label
               style={{
-                padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-color)",
-                background: "var(--bg-color)", color: "var(--text-color)", fontSize: "13px", outline: "none"
+                fontSize: "10px",
+                fontFamily: "'JetBrains Mono', monospace",
+                color: "var(--text-color-muted)",
               }}
-            />
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <label style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "var(--text-color-muted)" }}>MAX OUTPUT LENGTH</label>
+            >
+              MAX OUTPUT TOKENS
+            </label>
             <input
               type="number"
+              min={64}
+              max={65536}
               value={config.advanced.outputLength}
               onChange={(e) => updateAdvanced("outputLength", Number(e.target.value))}
               style={{
-                padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-color)",
-                background: "var(--bg-color)", color: "var(--text-color)", fontSize: "13px", outline: "none"
+                padding: "5px 8px",
+                borderRadius: "7px",
+                border: "1px solid var(--border-color)",
+                background: "var(--bg-color)",
+                color: "var(--text-color)",
+                fontSize: "12.5px",
+                fontFamily: "'JetBrains Mono', monospace",
+                outline: "none",
               }}
             />
+          </div>
+        </div>
+
+        {/* Stop Sequences */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <label
+            style={{
+              fontSize: "10px",
+              fontFamily: "'JetBrains Mono', monospace",
+              color: "var(--text-color-muted)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            STOP SEQUENCES (CSV):
+          </label>
+          <input
+            type="text"
+            placeholder="Optional, e.g. END_TURN, ###"
+            value={config.advanced.stopSequences}
+            onChange={(e) => updateAdvanced("stopSequences", e.target.value)}
+            style={{
+              flex: 1,
+              padding: "5px 10px",
+              borderRadius: "7px",
+              border: "1px solid var(--border-color)",
+              background: "var(--bg-color)",
+              color: "var(--text-color)",
+              fontSize: "12px",
+              fontFamily: "'JetBrains Mono', monospace",
+              outline: "none",
+            }}
+          />
+        </div>
+
+        {/* Built-in Tools Grid */}
+        <div style={{ borderTop: "1px solid var(--border-color)", paddingTop: "10px" }}>
+          <div
+            style={{
+              fontSize: "10.5px",
+              fontFamily: "'JetBrains Mono', monospace",
+              color: "var(--text-color-muted)",
+              marginBottom: "6px",
+            }}
+          >
+            MODEL TOOLS & INTEGRATIONS
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "8px",
+            }}
+          >
+            {[
+              {
+                label: "Google Search Grounding",
+                desc: "Live web search results",
+                key: "groundingGoogleSearch" as const,
+              },
+              {
+                label: "Python Code Execution",
+                desc: "Run sandboxed calculations",
+                key: "codeExecution" as const,
+              },
+              {
+                label: "URL Context Fetching",
+                desc: "Read URLs mentioned in prompt",
+                key: "urlContext" as const,
+              },
+              {
+                label: "Local DOCX / HTML Export",
+                desc: "Save generated files to disk",
+                key: "localFileExport" as const,
+              },
+            ].map((tool) => (
+              <div
+                key={tool.key}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "7px 10px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-color)",
+                  background: "var(--bg-color)",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "12.5px", color: "var(--text-color)", fontWeight: 600 }}>
+                    {tool.label}
+                  </div>
+                  <div style={{ fontSize: "11px", color: "var(--text-color-muted)" }}>
+                    {tool.desc}
+                  </div>
+                </div>
+                <Toggle
+                  checked={Boolean(config.tools[tool.key])}
+                  onChange={(v) => updateTool(tool.key, v)}
+                />
+              </div>
+            ))}
           </div>
         </div>
       </div>

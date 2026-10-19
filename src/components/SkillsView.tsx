@@ -62,46 +62,55 @@ const SkillsView: React.FC = () => {
         display: "flex",
         flexDirection: "column",
         width: "100%",
-        maxWidth: "768px",
+        maxWidth: "820px",
         margin: "0 auto",
-        padding: "32px 24px",
+        padding: "16px 20px 40px 20px",
         overflowY: "auto",
         fontFamily: "'Crimson Pro', serif",
+        gap: "12px",
       }}
       className="fade-in"
     >
       {/* Back navigation & Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         <button
           onClick={() => setView("chat")}
           style={{
-            width: "36px",
-            height: "36px",
+            width: "32px",
+            height: "32px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            borderRadius: "12px",
+            borderRadius: "9px",
             border: "1px solid var(--border-color)",
             color: "var(--text-color-muted)",
             background: "var(--input-bg)",
             cursor: "pointer",
-            transition: "background 0.2s"
+            transition: "background 0.2s",
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--border-color)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "var(--input-bg)"; }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "var(--border-color)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "var(--input-bg)";
+          }}
         >
-          <Icon name="arrow_back" size={18} />
+          <Icon name="arrow_back" size={16} />
         </button>
         <div>
-          <h2 style={{ fontSize: "22px", fontWeight: 700, color: "var(--text-color)", margin: 0, lineHeight: 1.2 }}>Skills & Agents</h2>
-          <p style={{ fontSize: "13px", color: "var(--text-color-muted)", margin: "2px 0 0 0" }}>Create and manage specialized persona prompts and AI skills</p>
+          <h2 style={{ fontSize: "19px", fontWeight: 700, color: "var(--text-color)", margin: 0, lineHeight: 1.15 }}>
+            Skills & Agents
+          </h2>
+          <p style={{ fontSize: "12px", color: "var(--text-color-muted)", margin: 0 }}>
+            Create and manage specialized persona prompts and AI skills
+          </p>
         </div>
       </div>
 
       {/* Main Content Container */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {/* Create Agent / Skill Section Card */}
-        <div style={{ padding: "20px", borderRadius: "16px", border: "1px solid var(--border-color)", background: "var(--input-bg)", display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={{ padding: "14px 16px", borderRadius: "12px", border: "1px solid var(--border-color)", background: "var(--input-bg)", display: "flex", flexDirection: "column", gap: "12px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
               <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-color)", margin: "0 0 2px 0" }}>
@@ -216,7 +225,7 @@ const SkillsView: React.FC = () => {
         </div>
 
         {/* Configured Agents Card Section */}
-        <div style={{ padding: "20px", borderRadius: "16px", border: "1px solid var(--border-color)", background: "var(--input-bg)", display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={{ padding: "14px 16px", borderRadius: "12px", border: "1px solid var(--border-color)", background: "var(--input-bg)", display: "flex", flexDirection: "column", gap: "10px" }}>
           <div>
             <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-color)", margin: "0 0 2px 0" }}>
               Active Agents & Skills ({skills.length})

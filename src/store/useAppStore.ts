@@ -1,11 +1,10 @@
 /**
  * useAppStore.ts
- * Central Zustand store for KeyLooper — manages API keys, sessions, mode, and settings.
+ * Central Zustand store for KeyLooper — manages API keys, sessions, mode, shortcuts, and settings.
  */
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { v4 as uuidv4 } from "uuid";
 import { invoke } from "@tauri-apps/api/core";
 import type { ApiKeyEntry, KeyStatus } from "../lib/KeyRotator";
 import type { ChatMessage } from "../lib/geminiClient";
@@ -15,40 +14,143 @@ import type { ChatMessage } from "../lib/geminiClient";
 export type AppMode = "normal" | "unlimited" | "pro";
 
 export const SUPPORTED_MODELS = [
+  "gemini-2.5-pro",
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-2.0-flash",
+  "gemini-2.0-flash-lite",
+] as const;
+
+const DEPRECATED_OR_INVALID_MODELS = new Set([
   "gemini-3.5-flash",
   "gemini-3.5-flash-lite",
   "gemini-3.6-flash",
   "gemini-3.1-flash-lite",
-  "gemini-2.5-flash-lite",
-  "gemini-2.5-flash",
-  "gemini-2.0-flash-lite",
   "gemini-robotics-er-1.6-preview",
-] as const;
+]);
 
 export type GeminiModel = (typeof SUPPORTED_MODELS)[number];
 
+export type ShortcutAction =
+  | "newChat"
+  | "sendMessage"
+  | "toggleHistory"
+  | "openSettings"
+  | "openSkills"
+  | "toggleTheme"
+  | "toggleDock"
+  | "toggleVoice"
+  | "switchModel"
+  | "cycleMode"
+  | "clearChat"
+  | "focusInput"
+  | "openGeminiWeb"
+  | "selectWorkspace";
+
+export type ShortcutMap = Record<ShortcutAction, string>;
+
+export const DEFAULT_SHORTCUTS: ShortcutMap = {
+  newChat: "Ctrl+N",
+  sendMessage: "Enter",
+  toggleHistory: "Ctrl+H",
+  openSettings: "Ctrl+,",
+  openSkills: "Alt+A",
+  toggleTheme: "Ctrl+Shift+D",
+  toggleDock: "Ctrl+B",
+  toggleVoice: "Alt+M",
+  switchModel: "Alt+G",
+  cycleMode: "Ctrl+Shift+M",
+  clearChat: "Ctrl+L",
+  focusInput: "Ctrl+/",
+  openGeminiWeb: "Alt+W",
+  selectWorkspace: "Ctrl+O",
+};
+
+export const SHORTCUT_LABELS: Record<ShortcutAction, { label: string; description: string }> = {
+  newChat: { label: "New Chat", description: "Start a fresh chat session" },
+  sendMessage: { label: "Send Message", description: "Submit prompt in chat box (Enter or Ctrl+Enter)" },
+  toggleHistory: { label: "Toggle History Panel", description: "Show or hide the collapsible chat history sidebar" },
+  openSettings: { label: "Open Settings", description: "Switch to the Settings view" },
+  openSkills: { label: "Open Agents & Skills", description: "Switch to the Agents / Skills view" },
+  toggleTheme: { label: "Toggle Theme", description: "Switch between Light and Dark mode" },
+  toggleDock: { label: "Toggle Bottom Dock", description: "Show or hide the floating navigation dock" },
+  toggleVoice: { label: "Voice Dictation", description: "Start or stop microphone speech recognition" },
+  switchModel: { label: "Select Model", description: "Focus and open the active model selector" },
+  cycleMode: { label: "Cycle Routing Mode", description: "Switch between Normal, Unlimited, and Pro modes" },
+  clearChat: { label: "Clear Active Chat", description: "Clear all messages in the current session" },
+  focusInput: { label: "Focus Prompt Input", description: "Jump cursor directly to the chat input box" },
+  openGeminiWeb: { label: "Google Gemini Web", description: "Open official Google Gemini web app window" },
+  selectWorkspace: { label: "Select Workspace Folder", description: "Choose local workspace directory for Autonomous File Agent" },
+};
+
+/** Convert a KeyboardEvent into a normalized shortcut string like "Ctrl+Shift+D" or "Ctrl+N". */
+export function formatShortcutFromEvent(e: KeyboardEvent | React.KeyboardEvent): string | null {
+  const rawKey = e.key;
+  if (["Control", "Shift", "Alt", "Meta"].includes(rawKey)) return null;
+
+  const mods: string[] = [];
+  if (e.ctrlKey || e.metaKey) mods.push("Ctrl");
+  if (e.altKey) mods.push("Alt");
+  if (e.shiftKey) mods.push("Shift");
+
+  const code = e.code || "";
+  let keyName = rawKey;
+  if (code.startsWith("Key") && code.length === 4) {
+    keyName = code.slice(3).toUpperCase();
+  } else if (code.startsWith("Digit") && code.length === 6) {
+    keyName = code.slice(5);
+  } else if (rawKey === " ") {
+    keyName = "Space";
+  } else if (rawKey === "Escape") {
+    keyName = "Esc";
+  } else if (rawKey === "ArrowUp") {
+    keyName = "Up";
+  } else if (rawKey === "ArrowDown") {
+    keyName = "Down";
+  } else if (rawKey === "ArrowLeft") {
+    keyName = "Left";
+  } else if (rawKey === "ArrowRight") {
+    keyName = "Right";
+  } else if (rawKey.length === 1) {
+    keyName = rawKey.toUpperCase();
+  }
+
+  return [...mods, keyName].join("+");
+}
+
+/** Check if a KeyboardEvent matches a configured shortcut string. */
+export function matchesShortcut(
+  e: KeyboardEvent | React.KeyboardEvent,
+  binding: string | undefined
+): boolean {
+  if (!binding) return false;
+  const formatted = formatShortcutFromEvent(e);
+  if (!formatted) return false;
+  return formatted.toLowerCase() === binding.trim().toLowerCase();
+}
+
 const extractTitle = (message: ChatMessage): string => {
-  const text = message.parts.find(p => p.text && p.text.trim().length > 0)?.text;
-  if (text) return text.substring(0, 30);
-  const fileMime = message.parts.find(p => p.fileData)?.fileData?.mimeType || message.parts.find(p => p.inlineData)?.inlineData?.mimeType;
-  if (fileMime) return `[${fileMime.split('/')[0]} attached]`;
+  const text = message.parts.find((p) => p.text && p.text.trim().length > 0)?.text;
+  if (text) return text.trim().substring(0, 40);
+  const fileMime =
+    message.parts.find((p) => p.fileData)?.fileData?.mimeType ||
+    message.parts.find((p) => p.inlineData)?.inlineData?.mimeType;
+  if (fileMime) return `[${fileMime.split("/")[0]} attached]`;
   return "New Chat";
 };
 
 export interface ModelConfig {
   systemInstructions: string;
-  thinkingLevel: "Low" | "Medium" | "High";
+  thinkingLevel: "Off" | "Low" | "Medium" | "High";
+  temperature: number;
   tools: {
-    structuredOutputs: boolean;
     codeExecution: boolean;
-    functionCalling: boolean;
     groundingGoogleSearch: boolean;
-    groundingGoogleMaps: boolean;
     urlContext: boolean;
+    localFileExport: boolean;
   };
   advanced: {
-    mediaResolution: "Low" | "Default" | "High";
-    safetySettings: string;
+    safetySettings: "Block None" | "Block Few" | "Block Some" | "Block Most";
     stopSequences: string;
     outputLength: number;
   };
@@ -57,16 +159,14 @@ export interface ModelConfig {
 export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   systemInstructions: "",
   thinkingLevel: "Medium",
+  temperature: 1.0,
   tools: {
-    structuredOutputs: false,
     codeExecution: false,
-    functionCalling: false,
     groundingGoogleSearch: false,
-    groundingGoogleMaps: false,
     urlContext: false,
+    localFileExport: true,
   },
   advanced: {
-    mediaResolution: "Default",
     safetySettings: "Block Some",
     stopSequences: "",
     outputLength: 8192,
@@ -94,35 +194,40 @@ export const DEFAULT_SKILLS: Skill[] = [
   {
     id: "skill-docx-assistant",
     name: "DOCX Assistant",
-    systemPrompt: "You are an expert document generator and DOCX assistant. Format, write, and structure documents, reports, templates, and clinical letters with clean headings, tables, bullet points, and professional formatting ready for export to Word (.docx).",
+    systemPrompt:
+      "You are an expert document generator and DOCX assistant. Format, write, and structure documents, reports, templates, and clinical letters with clean headings, tables, bullet points, and professional formatting ready for export to Word (.docx).",
     createdAt: 1720600000000,
     updatedAt: 1720600000000,
   },
   {
     id: "skill-appointment-list-maker",
     name: "Appointment List Maker",
-    systemPrompt: "You are a clinical scheduling and appointment list assistant. Organize, format, and parse patient schedules, clinic appointments, consultation times, and follow-up lists into clean, structured tables with dates, times, patient details, and action items.",
+    systemPrompt:
+      "You are a clinical scheduling and appointment list assistant. Organize, format, and parse patient schedules, clinic appointments, consultation times, and follow-up lists into clean, structured tables with dates, times, patient details, and action items.",
     createdAt: 1720600000000,
     updatedAt: 1720600000000,
   },
   {
     id: "default-code-architect",
     name: "Code Architect",
-    systemPrompt: "You are an expert software engineer and code architect. Provide clean, modular, efficient code solutions following SOLID principles.",
+    systemPrompt:
+      "You are an expert software engineer and code architect. Provide clean, modular, efficient code solutions following SOLID principles.",
     createdAt: 1721860000000,
     updatedAt: 1721860000000,
   },
   {
     id: "default-medical-summarizer",
     name: "Pediatric & Medical Summarizer",
-    systemPrompt: "You are a clinical documentation assistant. Summarize medical information concisely with high precision, clear headings, and evidence-based clinical context.",
+    systemPrompt:
+      "You are a clinical documentation assistant. Summarize medical information concisely with high precision, clear headings, and evidence-based clinical context.",
     createdAt: 1721860000000,
     updatedAt: 1721860000000,
   },
   {
     id: "default-creative-writer",
     name: "Creative Content Specialist",
-    systemPrompt: "You are an engaging creative writer. Craft polished, compelling content tailored to the audience's tone and requirements.",
+    systemPrompt:
+      "You are an engaging creative writer. Craft polished, compelling content tailored to the audience's tone and requirements.",
     createdAt: 1721860000000,
     updatedAt: 1721860000000,
   },
@@ -139,12 +244,15 @@ export interface UsageRecord {
   timestamp: number;
 }
 
+const MAX_USAGE_RECORDS = 2000;
+
 interface AppState {
   // API Keys
   apiKeys: ApiKeyEntry[];
   addApiKey: (name: string) => string;
   removeApiKey: (id: string) => void;
-  updateKeyStatus: (id: string, status: KeyStatus) => void;
+  updateKeyStatus: (id: string, status: KeyStatus, cooldownUntil?: number) => void;
+  syncApiKeys: (keys: ApiKeyEntry[]) => void;
   updateKeyName: (id: string, name: string) => void;
   reorderApiKeys: (startIndex: number, endIndex: number) => void;
 
@@ -162,8 +270,8 @@ interface AppState {
   customModels: string[];
   deletedModels: string[];
   addCustomModel: (model: string) => void;
-  removeCustomModel: (model: string) => void;
   deleteModel: (model: string) => void;
+  restoreDefaultsModels: () => void;
 
   // Selected Model
   selectedModel: string;
@@ -180,7 +288,11 @@ interface AppState {
   clearAllSessions: () => void;
   clearSessionMessages: (id: string) => void;
   updateMessageText: (sessionId: string, messageIndex: number, text: string) => void;
-  updateMessageMetadata: (sessionId: string, messageIndex: number, metadata: Partial<ChatMessage>) => void;
+  updateMessageMetadata: (
+    sessionId: string,
+    messageIndex: number,
+    metadata: Partial<ChatMessage>
+  ) => void;
   removeSubsequentMessages: (sessionId: string, fromIndex: number) => void;
 
   // Skills
@@ -194,6 +306,12 @@ interface AppState {
   recordUsage: (record: Omit<UsageRecord, "id" | "timestamp">) => void;
   clearUsageRecords: () => void;
 
+  // Shortcuts
+  shortcuts: ShortcutMap;
+  setShortcut: (action: ShortcutAction, binding: string) => void;
+  resetShortcut: (action: ShortcutAction) => void;
+  resetAllShortcuts: () => void;
+
   // Settings
   historyEnabled: boolean;
   setHistoryEnabled: (enabled: boolean) => void;
@@ -202,15 +320,20 @@ interface AppState {
   rotationIndex: number;
   setRotationIndex: (idx: number) => void;
 
-  // UI state (not persisted)
+  // UI state
   isSidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
-  currentView: "chat" | "settings" | "history" | "skills";
-  setView: (view: "chat" | "settings" | "history" | "skills") => void;
+  toggleSidebar: () => void;
+  currentView: "chat" | "settings" | "skills";
+  setView: (view: "chat" | "settings" | "skills") => void;
   isLoading: boolean;
   setLoading: (loading: boolean) => void;
-  error: string | null;
-  setError: (error: string | null) => void;
+
+  // Autonomous Local File Agent
+  agentWorkspace: string | null;
+  agentBackupPath: string | null;
+  setAgentWorkspace: (path: string | null) => void;
+  setAgentBackupPath: (path: string | null) => void;
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -221,12 +344,9 @@ export const useAppStore = create<AppState>()(
       // ── API Keys ──────────────────────────────────────────────────────────
       apiKeys: [],
       addApiKey: (name) => {
-        const id = uuidv4();
+        const id = crypto.randomUUID();
         set((s) => ({
-          apiKeys: [
-            ...s.apiKeys,
-            { id, name, status: "unchecked" as KeyStatus },
-          ],
+          apiKeys: [...s.apiKeys, { id, name, status: "unchecked" as KeyStatus }],
         }));
         return id;
       },
@@ -234,9 +354,15 @@ export const useAppStore = create<AppState>()(
         invoke("delete_api_key", { keyId: id }).catch((e) => console.error(e));
         set((s) => ({ apiKeys: s.apiKeys.filter((k) => k.id !== id) }));
       },
-      updateKeyStatus: (id, status) =>
+      updateKeyStatus: (id, status, cooldownUntil) =>
         set((s) => ({
-          apiKeys: s.apiKeys.map((k) => (k.id === id ? { ...k, status } : k)),
+          apiKeys: s.apiKeys.map((k) =>
+            k.id === id ? { ...k, status, cooldownUntil } : k
+          ),
+        })),
+      syncApiKeys: (keys) =>
+        set(() => ({
+          apiKeys: keys.map((k) => ({ ...k })),
         })),
       updateKeyName: (id, name) =>
         set((s) => ({
@@ -261,34 +387,49 @@ export const useAppStore = create<AppState>()(
       // ── Models ────────────────────────────────────────────────────────────
       modelConfigs: {},
       updateModelConfig: (model, config) =>
-        set((s) => ({
-          modelConfigs: {
-            ...s.modelConfigs,
-            [model]: {
-              ...(s.modelConfigs[model] || DEFAULT_MODEL_CONFIG),
-              ...config,
+        set((s) => {
+          const prev = s.modelConfigs[model] || DEFAULT_MODEL_CONFIG;
+          return {
+            modelConfigs: {
+              ...s.modelConfigs,
+              [model]: {
+                ...DEFAULT_MODEL_CONFIG,
+                ...prev,
+                ...config,
+                tools: {
+                  ...DEFAULT_MODEL_CONFIG.tools,
+                  ...(prev.tools || {}),
+                  ...(config.tools || {}),
+                },
+                advanced: {
+                  ...DEFAULT_MODEL_CONFIG.advanced,
+                  ...(prev.advanced || {}),
+                  ...(config.advanced || {}),
+                },
+              },
             },
-          },
-        })),
+          };
+        }),
       customModels: [],
       deletedModels: [],
       addCustomModel: (model) => {
         const trimmed = model.trim();
         if (!trimmed) return;
         set((s) => ({
-          customModels: s.customModels.includes(trimmed) ? s.customModels : [...s.customModels, trimmed],
+          customModels: s.customModels.includes(trimmed)
+            ? s.customModels
+            : [...s.customModels, trimmed],
           deletedModels: s.deletedModels.filter((m) => m !== trimmed),
         }));
       },
-      removeCustomModel: (model) =>
-        set((s) => ({
-          customModels: s.customModels.filter((m) => m !== model),
-        })),
       deleteModel: (model) =>
         set((s) => ({
           customModels: s.customModels.filter((m) => m !== model),
-          deletedModels: s.deletedModels.includes(model) ? s.deletedModels : [...s.deletedModels, model],
+          deletedModels: s.deletedModels.includes(model)
+            ? s.deletedModels
+            : [...s.deletedModels, model],
         })),
+      restoreDefaultsModels: () => set({ deletedModels: [] }),
       selectedModel: "gemini-2.5-flash",
       setModel: (model) => set({ selectedModel: model }),
 
@@ -297,14 +438,14 @@ export const useAppStore = create<AppState>()(
       activeSessionId: null,
 
       createSession: (skillId?: string) => {
-        const id = uuidv4();
+        const id = crypto.randomUUID();
         const session: ChatSession = {
           id,
           title: "New Chat",
           createdAt: Date.now(),
           updatedAt: Date.now(),
           messages: [],
-          ...(skillId ? { skillId } : {})
+          ...(skillId ? { skillId } : {}),
         };
         set((s) => ({
           sessions: [session, ...s.sessions],
@@ -335,10 +476,9 @@ export const useAppStore = create<AppState>()(
                   ...sess,
                   messages: [...sess.messages, message],
                   updatedAt: Date.now(),
-                  // Auto-title from first user message
                   title:
                     sess.messages.length === 0 && message.role === "user"
-                      ? extractTitle(message).slice(0, 40)
+                      ? extractTitle(message)
                       : sess.title,
                 }
               : sess
@@ -348,7 +488,7 @@ export const useAppStore = create<AppState>()(
       renameSession: (id, title) =>
         set((s) => ({
           sessions: s.sessions.map((sess) =>
-            sess.id === id ? { ...sess, title } : sess
+            sess.id === id ? { ...sess, title: title.trim() || sess.title } : sess
           ),
         })),
 
@@ -391,10 +531,10 @@ export const useAppStore = create<AppState>()(
                   ...sess,
                   messages: sess.messages.map((msg, idx) =>
                     idx === messageIndex
-                      ? { 
-                          ...msg, 
+                      ? {
+                          ...msg,
                           ...metadata,
-                          usage: { ...msg.usage, ...metadata.usage }
+                          usage: { ...msg.usage, ...metadata.usage },
                         }
                       : msg
                   ),
@@ -420,7 +560,7 @@ export const useAppStore = create<AppState>()(
       // ── Skills ────────────────────────────────────────────────────────────
       skills: DEFAULT_SKILLS,
       createSkill: (name, systemPrompt) => {
-        const id = uuidv4();
+        const id = crypto.randomUUID();
         const now = Date.now();
         set((s) => ({
           skills: [...s.skills, { id, name, systemPrompt, createdAt: now, updatedAt: now }],
@@ -440,13 +580,25 @@ export const useAppStore = create<AppState>()(
       // ── Usage ─────────────────────────────────────────────────────────────
       usageRecords: [],
       recordUsage: (record) => {
-        const id = uuidv4();
+        const id = crypto.randomUUID();
         const timestamp = Date.now();
         set((s) => ({
-          usageRecords: [...s.usageRecords, { ...record, id, timestamp }],
+          usageRecords: [...s.usageRecords.slice(-(MAX_USAGE_RECORDS - 1)), { ...record, id, timestamp }],
         }));
       },
       clearUsageRecords: () => set({ usageRecords: [] }),
+
+      // ── Shortcuts ─────────────────────────────────────────────────────────
+      shortcuts: { ...DEFAULT_SHORTCUTS },
+      setShortcut: (action, binding) =>
+        set((s) => ({
+          shortcuts: { ...s.shortcuts, [action]: binding },
+        })),
+      resetShortcut: (action) =>
+        set((s) => ({
+          shortcuts: { ...s.shortcuts, [action]: DEFAULT_SHORTCUTS[action] },
+        })),
+      resetAllShortcuts: () => set({ shortcuts: { ...DEFAULT_SHORTCUTS } }),
 
       // ── Settings ──────────────────────────────────────────────────────────
       historyEnabled: true,
@@ -456,42 +608,36 @@ export const useAppStore = create<AppState>()(
       rotationIndex: 0,
       setRotationIndex: (rotationIndex) => set({ rotationIndex }),
 
-      // ── UI State (not persisted — reset each launch) ───────────────────────
-      isSidebarOpen: true,
+      // ── UI State ──────────────────────────────────────────────────────────
+      isSidebarOpen: false,
       setSidebarOpen: (open) => set({ isSidebarOpen: open }),
+      toggleSidebar: () => set((s) => ({ isSidebarOpen: !s.isSidebarOpen })),
       currentView: "chat",
       setView: (view) => set({ currentView: view }),
       isLoading: false,
       setLoading: (loading) => set({ isLoading: loading }),
-      error: null,
-      setError: (error) => set({ error }),
+
+      // ── Autonomous Local File Agent ───────────────────────────────────────
+      agentWorkspace: null,
+      agentBackupPath: null,
+      setAgentWorkspace: (agentWorkspace) => set({ agentWorkspace }),
+      setAgentBackupPath: (agentBackupPath) => set({ agentBackupPath }),
     }),
     {
       name: "keylooper-storage",
       storage: createJSONStorage(() => ({
         getItem: (name) => {
           const current = localStorage.getItem(name);
-          const legacy = localStorage.getItem("apkirota-storage");
-          if (current) {
-            try {
-              const pCurrent = JSON.parse(current);
-              if (Array.isArray(pCurrent.state?.apiKeys) && pCurrent.state.apiKeys.length > 0) {
-                return current;
-              }
-            } catch (e) {}
-          }
-          if (legacy) {
-            try {
-              const pLegacy = JSON.parse(legacy);
-              if (Array.isArray(pLegacy.state?.apiKeys) && pLegacy.state.apiKeys.length > 0) {
-                return legacy;
-              }
-            } catch (e) {}
-          }
-          return current || legacy || null;
+          if (current !== null) return current;
+          // One-time fallback to legacy storage only when keylooper-storage does not exist yet
+          return localStorage.getItem("apkirota-storage");
         },
         setItem: (name, value) => {
-          localStorage.setItem(name, value);
+          try {
+            localStorage.setItem(name, value);
+          } catch (err) {
+            console.error("Failed to persist state to localStorage:", err);
+          }
         },
         removeItem: (name) => {
           localStorage.removeItem(name);
@@ -501,23 +647,6 @@ export const useAppStore = create<AppState>()(
         try {
           const merged = { ...currentState, ...(persistedState as object) };
 
-          // Recovery fallback: if merged.apiKeys is empty, check legacy storage keys
-          if (!Array.isArray(merged.apiKeys) || merged.apiKeys.length === 0) {
-            try {
-              const legacyRaw = localStorage.getItem("apkirota-storage");
-              if (legacyRaw) {
-                const legacyParsed = JSON.parse(legacyRaw);
-                if (Array.isArray(legacyParsed.state?.apiKeys) && legacyParsed.state.apiKeys.length > 0) {
-                  merged.apiKeys = legacyParsed.state.apiKeys;
-                }
-                if ((!Array.isArray(merged.sessions) || merged.sessions.length === 0) && Array.isArray(legacyParsed.state?.sessions)) {
-                  merged.sessions = legacyParsed.state.sessions;
-                }
-              }
-            } catch (e) {
-              console.error("Error reading legacy storage in merge:", e);
-            }
-          }
           const existingSkills = Array.isArray(merged.skills) ? merged.skills : [];
           const existingNames = new Set(
             existingSkills
@@ -532,20 +661,44 @@ export const useAppStore = create<AppState>()(
 
           const skillsToKeep = [...existingSkills];
           for (const defSkill of DEFAULT_SKILLS) {
-            if (!existingNames.has(defSkill.name.toLowerCase()) && !existingIds.has(defSkill.id)) {
+            if (
+              !existingNames.has(defSkill.name.toLowerCase()) &&
+              !existingIds.has(defSkill.id)
+            ) {
               skillsToKeep.push(defSkill);
             }
           }
           merged.skills = skillsToKeep;
+
           if (!Array.isArray(merged.customModels)) {
             merged.customModels = [];
+          } else {
+            merged.customModels = merged.customModels.filter(
+              (m: string) => !DEPRECATED_OR_INVALID_MODELS.has(m)
+            );
           }
           if (!Array.isArray(merged.deletedModels)) {
             merged.deletedModels = [];
           }
-          if (!merged.selectedModel || typeof merged.selectedModel !== "string") {
+          if (
+            !merged.selectedModel ||
+            typeof merged.selectedModel !== "string" ||
+            DEPRECATED_OR_INVALID_MODELS.has(merged.selectedModel)
+          ) {
             merged.selectedModel = "gemini-2.5-flash";
           }
+
+          merged.shortcuts = {
+            ...DEFAULT_SHORTCUTS,
+            ...(merged.shortcuts && typeof merged.shortcuts === "object"
+              ? merged.shortcuts
+              : {}),
+          };
+
+          if (merged.currentView === ("history" as any)) {
+            merged.currentView = "chat";
+          }
+
           return merged;
         } catch (err) {
           console.error("Storage rehydration merge error:", err);
@@ -553,8 +706,6 @@ export const useAppStore = create<AppState>()(
         }
       },
       partialize: (state) => {
-        // Strip Base64 inlineData from messages before persisting to disk.
-        // This prevents large files (images, audio) from leaking as plaintext.
         const sanitizeSessions = (sessions: ChatSession[]): ChatSession[] =>
           sessions.map((session) => ({
             ...session,
@@ -566,7 +717,7 @@ export const useAppStore = create<AppState>()(
                     ...part,
                     inlineData: {
                       mimeType: part.inlineData.mimeType,
-                      data: "[stripped]", // placeholder — actual data is in-memory only
+                      data: "[stripped]",
                     },
                   };
                 }
@@ -577,6 +728,7 @@ export const useAppStore = create<AppState>()(
 
         return {
           apiKeys: state.apiKeys,
+          proApiKey: state.proApiKey,
           mode: state.mode,
           selectedModel: state.selectedModel,
           sessions: state.historyEnabled ? sanitizeSessions(state.sessions) : [],
@@ -586,9 +738,13 @@ export const useAppStore = create<AppState>()(
           deletedModels: state.deletedModels || [],
           historyEnabled: state.historyEnabled,
           theme: state.theme,
-          usageRecords: state.usageRecords,
+          usageRecords: state.usageRecords.slice(-MAX_USAGE_RECORDS),
           rotationIndex: state.rotationIndex,
           modelConfigs: state.modelConfigs,
+          shortcuts: state.shortcuts,
+          isSidebarOpen: state.isSidebarOpen,
+          agentWorkspace: state.agentWorkspace,
+          agentBackupPath: state.agentBackupPath,
         };
       },
     }
@@ -602,13 +758,13 @@ let cachedDeletedModels: string[] | undefined;
 let cachedAvailableModels: string[] = [...SUPPORTED_MODELS];
 
 export const selectAvailableModels = (s: AppState): string[] => {
-  if (s.customModels !== cachedCustomModels || s.deletedModels !== cachedDeletedModels) {
+  if (
+    s.customModels !== cachedCustomModels ||
+    s.deletedModels !== cachedDeletedModels
+  ) {
     cachedCustomModels = s.customModels;
     cachedDeletedModels = s.deletedModels;
-    const all = [
-      ...SUPPORTED_MODELS,
-      ...(s.customModels || []),
-    ];
+    const all = [...SUPPORTED_MODELS, ...(s.customModels || [])];
     const deletedSet = new Set(s.deletedModels || []);
     cachedAvailableModels = all.filter((m) => !deletedSet.has(m));
   }
