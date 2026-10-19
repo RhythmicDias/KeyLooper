@@ -87,25 +87,14 @@ export function buildPayload(
       /(docx|word document|\.docx|document generator)/i.test(systemPrompt)
   );
 
-  const mentionsDocx =
-    /(docx|\.docx|word document|word file|export to word|save to word|download word|create word|create a word|export docx|save as docx|download docx|make docx|generate docx)/i.test(
+  const mentionsExplicitDocxOrWord =
+    /(docx|\.docx|word document|word file|as a word doc|in word format|export to word|save to word|download word|create word|create a word|export docx|save as docx|download docx|make docx|generate docx|downloadable document|downloadable file|export to file)/i.test(
       fullConversationContext
     );
 
-  const mentionsReportExport =
-    isDocxSkill ||
-    mentionsDocx ||
-    Boolean(
-      /(report|summary|consult note|letter|document)/i.test(
-        fullConversationContext
-      ) &&
-        /(export|save|download|create|generate|file)/i.test(
-          fullConversationContext
-        )
-    );
-
   const wantsDocxExport =
-    (modelConfig?.tools?.localFileExport ?? true) && mentionsReportExport;
+    (modelConfig?.tools?.localFileExport ?? true) &&
+    (isDocxSkill || mentionsExplicitDocxOrWord);
 
   const wantsHtmlExport =
     (modelConfig?.tools?.localFileExport ?? true) &&
@@ -119,7 +108,7 @@ export function buildPayload(
     functionDeclarations.push({
       name: "create_docx_file",
       description:
-        "Generate and save a .docx document to the user's computer. Use this whenever the user requests a document, report, consult note, letter, or Word file.",
+        "Generate and save a .docx Word document to the user's computer. Use this when the user asks for a Word document, .docx file, or downloadable file export.",
       parameters: {
         type: "OBJECT",
         properties: {
@@ -255,7 +244,7 @@ export function buildPayload(
   let finalSystemPrompt = systemPrompt || modelConfig?.systemInstructions;
 
   if (wantsDocxExport) {
-    const docxInstructions = `\n\n[LOCAL WORD/DOCX FILE EXPORT ACTIVE]\nYou have the tool "create_docx_file" available to generate and save Microsoft Word (.docx) documents to the user's computer.\nCRITICAL INSTRUCTION:\nWhen generating, writing, or formatting a document, clinical report, consult note, letter, or file:\n1. You MUST invoke the \`create_docx_file\` tool.\n2. In the \`content\` parameter, provide the complete, beautifully structured text of the document/report with clean headings, bullet points, and clinical details.\n3. In the \`filename\` parameter, suggest an appropriate filename ending with \`.docx\` (e.g. "pediatric_neurology_report.docx").\n4. NEVER output Python code, python-docx scripts, or code blocks to generate the document. Always call \`create_docx_file\` directly.`;
+    const docxInstructions = `\n\n[LOCAL WORD/DOCX FILE EXPORT AVAILABLE]\nYou have the tool "create_docx_file" available to generate and save Microsoft Word (.docx) documents to the user's computer.\nCRITICAL INSTRUCTION:\n1. When the user explicitly requests to create, export, save, or download a Word document (.docx) or file, you MUST invoke the \`create_docx_file\` tool.\n2. Pass the full, beautifully structured document text in the \`content\` parameter, and a clean suggested filename ending with \`.docx\` in the \`filename\` parameter.\n3. For general clinical queries, questions, or summaries where the user does not request a downloadable document, answer normally in chat without invoking the tool.\n4. NEVER output raw Python code, python-docx scripts, or code blocks to generate the file. Always call \`create_docx_file\` directly when file creation is requested.`;
     finalSystemPrompt = (finalSystemPrompt || "") + docxInstructions;
   }
 

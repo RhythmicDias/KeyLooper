@@ -51,12 +51,25 @@ describe("Autonomous Local File Agent Payload", () => {
       docxPrompt
     );
 
-    expect(payload.systemInstruction?.parts[0]?.text).toContain("LOCAL WORD/DOCX FILE EXPORT ACTIVE");
-    expect(payload.systemInstruction?.parts[0]?.text).toContain("NEVER output Python code");
+    expect(payload.systemInstruction?.parts[0]?.text).toContain("LOCAL WORD/DOCX FILE EXPORT AVAILABLE");
+    expect(payload.systemInstruction?.parts[0]?.text).toContain("NEVER output raw Python code");
 
     const tools = payload.tools?.[0]?.functionDeclarations;
     expect(tools).toBeDefined();
     const docxTool = tools.find((t: any) => t.name === "create_docx_file");
     expect(docxTool).toBeDefined();
+  });
+
+  it("does not inject create_docx_file for general conversation or report queries without Word/docx requests", () => {
+    const payload = buildPayload(
+      "gemini-2.5-flash",
+      [],
+      [{ text: "Give me a brief clinical report on this patient's head circumference." }],
+      "You are a helpful medical assistant."
+    );
+
+    const tools = payload.tools?.[0]?.functionDeclarations;
+    const docxTool = tools?.find((t: any) => t.name === "create_docx_file");
+    expect(docxTool).toBeUndefined();
   });
 });
