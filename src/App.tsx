@@ -171,6 +171,7 @@ const App: React.FC = () => {
   const shortcuts = useAppStore((s) => s.shortcuts);
   const agentWorkspace = useAppStore((s) => s.agentWorkspace);
   const setAgentWorkspace = useAppStore((s) => s.setAgentWorkspace);
+  const setSessionWorkspace = useAppStore((s) => s.setSessionWorkspace);
   const agentBackupPath = useAppStore((s) => s.agentBackupPath);
   const setAgentBackupPath = useAppStore((s) => s.setAgentBackupPath);
 
@@ -265,6 +266,7 @@ const App: React.FC = () => {
         if (!curSessionId) {
           curSessionId = createSession();
         }
+        setSessionWorkspace(curSessionId, selected);
 
         appendMessage(curSessionId, {
           role: "model",

@@ -67,8 +67,10 @@ const SettingsView: React.FC = () => {
   const resetShortcut = useAppStore((s) => s.resetShortcut);
   const resetAllShortcuts = useAppStore((s) => s.resetAllShortcuts);
 
+  const activeSessionId = useAppStore((s) => s.activeSessionId);
   const agentWorkspace = useAppStore((s) => s.agentWorkspace);
   const setAgentWorkspace = useAppStore((s) => s.setAgentWorkspace);
+  const setSessionWorkspace = useAppStore((s) => s.setSessionWorkspace);
   const agentBackupPath = useAppStore((s) => s.agentBackupPath);
   const setAgentBackupPath = useAppStore((s) => s.setAgentBackupPath);
 
@@ -264,6 +266,9 @@ const SettingsView: React.FC = () => {
       if (!selected || typeof selected !== "string") return;
 
       setAgentWorkspace(selected);
+      if (activeSessionId) {
+        setSessionWorkspace(activeSessionId, selected);
+      }
       try {
         const backupPath = await invoke<string>("agent_create_backup", {
           workspacePath: selected,

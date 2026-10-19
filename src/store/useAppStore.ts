@@ -180,6 +180,7 @@ export interface ChatSession {
   updatedAt: number;
   messages: ChatMessage[];
   skillId?: string;
+  workspacePath?: string;
 }
 
 export interface Skill {
@@ -285,6 +286,7 @@ interface AppState {
   deleteSession: (id: string) => void;
   selectSession: (id: string) => void;
   setSessionSkill: (sessionId: string, skillId?: string) => void;
+  setSessionWorkspace: (id: string, workspacePath: string | null) => void;
   appendMessage: (sessionId: string, message: ChatMessage) => void;
   renameSession: (id: string, title: string) => void;
   clearAllSessions: () => void;
@@ -491,21 +493,52 @@ export const useAppStore = create<AppState>()(
           ),
         })),
 
+      setSessionWorkspace: (id, workspacePath) =>
+        set((s) => ({
+          sessions: s.sessions.map((sess) => {
+            if (sess.id !== id) return sess;
+            const folder = workspacePath
+              ? workspacePath.split(/[\\/]/).filter(Boolean).pop() || "Workspace"
+              : null;
+            return {
+              ...sess,
+              workspacePath: workspacePath || undefined,
+              title:
+                (sess.title === "New Chat" || !sess.title) && folder
+                  ? folder
+                  : sess.title,
+            };
+          }),
+        })),
+
       appendMessage: (sessionId, message) =>
         set((s) => ({
-          sessions: s.sessions.map((sess) =>
-            sess.id === sessionId
-              ? {
-                  ...sess,
-                  messages: [...sess.messages, message],
-                  updatedAt: Date.now(),
-                  title:
-                    sess.messages.length === 0 && message.role === "user"
-                      ? extractTitle(message)
-                      : sess.title,
-                }
-              : sess
-          ),
+          sessions: s.sessions.map((sess) => {
+            if (sess.id !== sessionId) return sess;
+            const isFirstUserMsg =
+              message.role === "user" &&
+              (sess.title === "New Chat" ||
+                !sess.messages.some((m) => m.role === "user"));
+            let newTitle = sess.title;
+            if (isFirstUserMsg) {
+              const extracted = extractTitle(message);
+              if (sess.workspacePath) {
+                const folder =
+                  sess.workspacePath.split(/[\\/]/).filter(Boolean).pop() ||
+                  "Workspace";
+                newTitle =
+                  extracted !== "New Chat" ? `${folder}: ${extracted}` : folder;
+              } else {
+                newTitle = extracted;
+              }
+            }
+            return {
+              ...sess,
+              messages: [...sess.messages, message],
+              updatedAt: Date.now(),
+              title: newTitle,
+            };
+          }),
         })),
 
       renameSession: (id, title) =>
