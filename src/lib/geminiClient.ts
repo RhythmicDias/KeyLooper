@@ -541,6 +541,12 @@ export async function sendMessage(
             const blob = await Packer.toBlob(doc);
             const buffer = await blob.arrayBuffer();
 
+            // Release active input focus and let WebView2 settle cursor state before opening modal
+            if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+              document.activeElement.blur();
+            }
+            await new Promise((r) => setTimeout(r, 60));
+
             const filePath = await save({
               filters: [{ name: "Word Document", extensions: ["docx"] }],
               defaultPath: (() => {
@@ -580,6 +586,12 @@ export async function sendMessage(
               call.args.html_content ||
               call.args.content ||
               "<html><body></body></html>";
+
+            // Release active input focus and let WebView2 settle cursor state before opening modal
+            if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+              document.activeElement.blur();
+            }
+            await new Promise((r) => setTimeout(r, 60));
 
             const filePath = await save({
               filters: [{ name: "HTML Document", extensions: ["html", "htm"] }],
