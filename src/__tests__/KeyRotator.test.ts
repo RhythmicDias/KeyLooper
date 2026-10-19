@@ -53,9 +53,35 @@ describe("KeyRotator", () => {
 
   it("getActiveKey returns the top-most healthy active key (Normal mode)", () => {
     const rotator = new KeyRotator(keys);
+    // Normal mode: repeated calls stay on the top active key
     expect(rotator.getActiveKey()?.id).toBe("1");
     expect(rotator.getActiveKey()?.id).toBe("1");
     expect(rotator.getActiveKey()?.id).toBe("1");
+  });
+
+  it("getActiveKey falls back to next available key when top key is rate-limited (Normal mode)", () => {
+    const rotator = new KeyRotator(keys);
+    expect(rotator.getActiveKey()?.id).toBe("1");
+
+    // When key 1 hits rate-limit cooldown
+    rotator.reportRateLimit("1", 60_000);
+    expect(rotator.getActiveKey()?.id).toBe("2");
+
+    // When key 2 also hits rate-limit cooldown
+    rotator.reportRateLimit("2", 60_000);
+    expect(rotator.getActiveKey()?.id).toBe("3");
+
+    // When key 3 also rate-limited, no healthy keys remain
+    rotator.reportRateLimit("3", 60_000);
+    expect(rotator.getActiveKey()).toBeNull();
+  });
+
+  it("getNextKey cycles in round-robin order across all healthy keys (Unlimited mode)", () => {
+    const rotator = new KeyRotator(keys);
+    expect(rotator.getNextKey()?.id).toBe("1");
+    expect(rotator.getNextKey()?.id).toBe("2");
+    expect(rotator.getNextKey()?.id).toBe("3");
+    expect(rotator.getNextKey()?.id).toBe("1");
   });
 
   it("skips rate-limited keys in round-robin", () => {
