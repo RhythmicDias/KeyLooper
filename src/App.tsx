@@ -1282,7 +1282,6 @@ const App: React.FC = () => {
             fontFamily: "'Crimson Pro', serif",
             fontSize: isWelcome ? "17px" : "15.5px",
             lineHeight: isWelcome ? "25px" : "22px",
-            fontStyle: "italic",
             color: "var(--text-color)",
             caretColor: "var(--primary)",
           }}
