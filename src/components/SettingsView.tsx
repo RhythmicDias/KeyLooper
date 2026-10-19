@@ -49,6 +49,7 @@ const SettingsView: React.FC = () => {
   const updateKeyName = useAppStore((s) => s.updateKeyName);
   const updateKeyStatus = useAppStore((s) => s.updateKeyStatus);
   const reorderApiKeys = useAppStore((s) => s.reorderApiKeys);
+  const reactivateAllKeys = useAppStore((s) => s.reactivateAllKeys);
   const historyEnabled = useAppStore((s) => s.historyEnabled);
   const setHistoryEnabled = useAppStore((s) => s.setHistoryEnabled);
   const sessions = useAppStore((s) => s.sessions);
@@ -577,26 +578,51 @@ const SettingsView: React.FC = () => {
                 </p>
               </div>
               {apiKeys.length > 0 && (
-                <button
-                  onClick={handleTestAllKeys}
-                  disabled={testing.size > 0}
-                  style={{
-                    padding: "4px 10px",
-                    borderRadius: "7px",
-                    fontSize: "11px",
-                    fontFamily: "'JetBrains Mono', monospace",
-                    border: "1px solid var(--border-color)",
-                    background: "var(--bg-color)",
-                    color: "var(--text-color)",
-                    cursor: testing.size > 0 ? "not-allowed" : "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  <Icon name="verified" size={14} style={{ color: "var(--primary)" }} />
-                  <span>{testing.size > 0 ? "Testing..." : "Test All"}</span>
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <button
+                    onClick={() => {
+                      reactivateAllKeys();
+                      setAgentNotice("All API keys reactivated to active pool.");
+                    }}
+                    title="Clear rate-limit cooldowns and restore all keys to active pool"
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: "7px",
+                      fontSize: "11px",
+                      fontFamily: "'JetBrains Mono', monospace",
+                      border: "1px solid var(--border-color)",
+                      background: "var(--bg-color)",
+                      color: "var(--text-color)",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    <Icon name="refresh" size={14} style={{ color: "var(--primary)" }} />
+                    <span>Reset All to Active</span>
+                  </button>
+                  <button
+                    onClick={handleTestAllKeys}
+                    disabled={testing.size > 0}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: "7px",
+                      fontSize: "11px",
+                      fontFamily: "'JetBrains Mono', monospace",
+                      border: "1px solid var(--border-color)",
+                      background: "var(--bg-color)",
+                      color: "var(--text-color)",
+                      cursor: testing.size > 0 ? "not-allowed" : "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    <Icon name="verified" size={14} style={{ color: "var(--primary)" }} />
+                    <span>{testing.size > 0 ? "Testing..." : "Test All"}</span>
+                  </button>
+                </div>
               )}
             </div>
 

@@ -104,6 +104,44 @@ describe("KeyRotator", () => {
     rotator.reportRateLimit("2", 999_999);
     expect(rotator.healthyCount).toBe(1);
   });
+
+  it("fairly rotates across 5 keys without starving any key", () => {
+    const fiveKeys = [
+      makeKey("1", "Personal Gmail"),
+      makeKey("2", "Storememory"),
+      makeKey("3", "DevineHum"),
+      makeKey("4", "GreenParkSteve"),
+      makeKey("5", "PediaScribe"),
+    ];
+    const rotator = new KeyRotator(fiveKeys);
+
+    // Call 15 times (3 full cycles)
+    const usageCounts: Record<string, number> = {};
+    for (let i = 0; i < 15; i++) {
+      const key = rotator.getNextKey();
+      expect(key).not.toBeNull();
+      if (key) {
+        usageCounts[key.name] = (usageCounts[key.name] || 0) + 1;
+      }
+    }
+
+    // Every single one of the 5 keys must be used exactly 3 times
+    expect(usageCounts["Personal Gmail"]).toBe(3);
+    expect(usageCounts["Storememory"]).toBe(3);
+    expect(usageCounts["DevineHum"]).toBe(3);
+    expect(usageCounts["GreenParkSteve"]).toBe(3);
+    expect(usageCounts["PediaScribe"]).toBe(3);
+  });
+
+  it("reactivates all keys with reactivateAll", () => {
+    const rotator = new KeyRotator(keys);
+    rotator.reportInvalid("1");
+    rotator.reportRateLimit("2", 999_999);
+    expect(rotator.healthyCount).toBe(1);
+
+    rotator.reactivateAll();
+    expect(rotator.healthyCount).toBe(3);
+  });
 });
 
 describe("buildPayload & Shortcut Matching", () => {

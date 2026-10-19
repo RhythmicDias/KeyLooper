@@ -255,6 +255,7 @@ interface AppState {
   syncApiKeys: (keys: ApiKeyEntry[]) => void;
   updateKeyName: (id: string, name: string) => void;
   reorderApiKeys: (startIndex: number, endIndex: number) => void;
+  reactivateAllKeys: () => void;
 
   // Pro API Key
   proApiKey: ApiKeyEntry | null;
@@ -376,13 +377,21 @@ export const useAppStore = create<AppState>()(
           result.splice(endIndex, 0, removed);
           return { apiKeys: result };
         }),
+      reactivateAllKeys: () =>
+        set((s) => ({
+          apiKeys: s.apiKeys.map((k) => ({
+            ...k,
+            status: "unchecked" as KeyStatus,
+            cooldownUntil: undefined,
+          })),
+        })),
 
       // ── Pro API Key ────────────────────────────────────────────────────────
       proApiKey: null,
       setProApiKey: (entry) => set({ proApiKey: entry }),
 
       // ── Mode ──────────────────────────────────────────────────────────────
-      mode: "normal",
+      mode: "unlimited",
       setMode: (mode) => set({ mode }),
 
       // ── Models ────────────────────────────────────────────────────────────

@@ -297,9 +297,15 @@ export async function sendMessage(
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    const requiredKeyId =
-      opts.userParts.find((p) => p.uploadKeyId)?.uploadKeyId ||
-      opts.history.flatMap((m) => m.parts).find((p) => p.uploadKeyId)?.uploadKeyId;
+    // A specific key is ONLY required if the payload actually contains a Gemini File API fileUri
+    const hasActiveFileUri =
+      opts.userParts.some((p) => p.fileData?.fileUri) ||
+      opts.history.some((m) => m.parts.some((p) => p.fileData?.fileUri));
+
+    const requiredKeyId = hasActiveFileUri
+      ? opts.userParts.find((p) => p.uploadKeyId)?.uploadKeyId ||
+        opts.history.flatMap((m) => m.parts).find((p) => p.uploadKeyId)?.uploadKeyId
+      : undefined;
 
     let entry;
     if (opts.mode === "pro") {
@@ -434,18 +440,22 @@ export async function sendMessage(
           }
           const isKeyInvalid =
             res.status === 401 ||
-            res.status === 403 ||
-            /api[_ ]?key/i.test(errText);
-          if (opts.mode !== "pro" && isKeyInvalid) {
-            opts.rotator.reportInvalid(entry.id);
+            /API_KEY_INVALID|API key not valid|CREDENTIAL_UNAUTHORIZED/i.test(errText);
+          if (opts.mode !== "pro") {
+            if (isKeyInvalid) {
+              opts.rotator.reportInvalid(entry.id);
+            } else if (res.status === 403) {
+              // 403 or quota limits get placed on cooldown rather than permanent death
+              opts.rotator.reportRateLimit(entry.id, 120_000);
+            }
           }
           if (!isKeyInvalid && res.status === 400) {
             throw new Error(`Gemini API request error (400): ${errText}`);
           }
           lastError = new Error(
-            `Key "${entry.name}" is invalid or unauthorized (attempt ${
+            `Key "${entry.name}" encountered error (attempt ${
               attempt + 1
-            }/${MAX_RETRIES}). Details: ${errText}`
+            }/${MAX_RETRIES}): ${errText}`
           );
           break;
         }
@@ -703,9 +713,11 @@ export async function sendMessage(
 /** Send a lightweight test prompt to verify a key is valid. */
 export async function testKey(
   apiKey: string,
-  model = "gemini-2.5-flash"
+  _model = "gemini-2.5-flash"
 ): Promise<"valid" | "invalid" | "rate-limited"> {
-  const url = `${GEMINI_BASE}/${model}:generateContent`;
+  // Always verify against a standard, guaranteed Gemini model
+  const testModel = "gemini-2.5-flash";
+  const url = `${GEMINI_BASE}/${testModel}:generateContent`;
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -714,18 +726,35 @@ export async function testKey(
         "x-goog-api-key": apiKey,
       },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: "Hi" }] }],
-        generationConfig: { maxOutputTokens: 5 },
+        contents: [{ role: "user", parts: [{ text: "hi" }] }],
+        generationConfig: { maxOutputTokens: 2 },
       }),
     });
 
     if (res.status === 429) return "rate-limited";
-    if (res.status === 400 || res.status === 401 || res.status === 403)
-      return "invalid";
     if (res.ok) return "valid";
-    return "invalid";
+
+    let errMsg = "";
+    try {
+      const errJson = await res.json();
+      errMsg = errJson?.error?.message || "";
+    } catch {}
+
+    // Only mark invalid if credentials are explicitly rejected
+    if (
+      res.status === 401 ||
+      /API_KEY_INVALID|API key not valid|CREDENTIAL_UNAUTHORIZED/i.test(errMsg)
+    ) {
+      return "invalid";
+    }
+
+    if (res.status === 403) {
+      return "rate-limited";
+    }
+
+    return "rate-limited";
   } catch {
-    return "invalid";
+    return "rate-limited";
   }
 }
 
