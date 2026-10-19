@@ -1007,7 +1007,7 @@ const App: React.FC = () => {
       <div
         className="input-card"
         style={{
-          padding: isWelcome ? "28px 32px 22px 32px" : "12px 20px",
+          padding: isWelcome ? "16px 20px 12px 20px" : "10px 16px",
           position: "relative",
         }}
       >
@@ -1224,18 +1224,18 @@ const App: React.FC = () => {
               display: "flex",
               alignItems: "center",
               gap: "6px",
-              padding: "3px 10px 3px 8px",
+              padding: "2px 8px",
               borderRadius: "20px",
               background: "var(--primary)",
               color: "white",
               width: "fit-content",
-              marginBottom: "8px",
-              fontSize: "12px",
+              marginBottom: "6px",
+              fontSize: "11px",
               fontFamily: "'JetBrains Mono', monospace",
               fontWeight: 600,
             }}
           >
-            <Icon name="smart_toy" size={14} />
+            <Icon name="smart_toy" size={13} />
             <span>Agent: {activeSkill.name}</span>
             <button
               onClick={() => {
@@ -1260,7 +1260,7 @@ const App: React.FC = () => {
                 e.currentTarget.style.opacity = "0.8";
               }}
             >
-              <Icon name="close" size={13} />
+              <Icon name="close" size={12} />
             </button>
           </div>
         )}
@@ -1288,8 +1288,8 @@ const App: React.FC = () => {
             outline: "none",
             resize: "none",
             fontFamily: "'Crimson Pro', serif",
-            fontSize: isWelcome ? "20px" : "17px",
-            lineHeight: isWelcome ? "30px" : "26px",
+            fontSize: isWelcome ? "17px" : "15.5px",
+            lineHeight: isWelcome ? "25px" : "22px",
             fontStyle: "italic",
             color: "var(--text-color)",
             caretColor: "var(--primary)",
@@ -1298,7 +1298,7 @@ const App: React.FC = () => {
 
         <div
           className="flex items-center justify-between"
-          style={{ marginTop: isWelcome ? "20px" : "8px" }}
+          style={{ marginTop: isWelcome ? "10px" : "6px" }}
         >
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -1308,8 +1308,8 @@ const App: React.FC = () => {
               isAttaching ? "animate-pulse" : ""
             }`}
             style={{
-              width: isWelcome ? "42px" : "38px",
-              height: isWelcome ? "42px" : "38px",
+              width: "34px",
+              height: "34px",
               border: "1px solid var(--border-color)",
               color: isAttaching ? "var(--primary)" : "var(--text-color-muted)",
               background: "transparent",
@@ -1322,30 +1322,28 @@ const App: React.FC = () => {
               if (!isAttaching) e.currentTarget.style.background = "transparent";
             }}
           >
-            <Icon name="add" size={isWelcome ? 22 : 20} />
+            <Icon name="add" size={18} />
           </button>
 
           <div
             className="flex items-center"
-            style={{ gap: isWelcome ? "14px" : "10px" }}
+            style={{ gap: "8px" }}
           >
-            {/* Model selector */}
+            {/* Model selector pill */}
             <div
               className="relative flex items-center rounded-full cursor-pointer transition-colors"
               style={{
-                padding: isWelcome
-                  ? "7px 18px 7px 14px"
-                  : "5px 14px 5px 12px",
+                padding: "4px 10px 4px 10px",
                 background: "var(--bg-color)",
                 border: "1px solid var(--border-color)",
-                gap: "6px",
+                gap: "5px",
               }}
               title={`Select Model (${shortcuts.switchModel})`}
             >
               <span
                 style={{
-                  fontFamily: "'Crimson Pro', serif",
-                  fontSize: isWelcome ? "14.5px" : "13px",
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "11.5px",
                   fontWeight: 500,
                   color: "var(--text-color-muted)",
                   whiteSpace: "nowrap",
@@ -1381,7 +1379,7 @@ const App: React.FC = () => {
               </select>
               <Icon
                 name="expand_more"
-                size={isWelcome ? 16 : 14}
+                size={14}
                 style={{ color: "var(--text-color-muted)" }}
               />
             </div>
@@ -1392,8 +1390,8 @@ const App: React.FC = () => {
               title={`Voice Dictation (${shortcuts.toggleVoice})`}
               className="flex items-center justify-center rounded-full transition-colors"
               style={{
-                width: isWelcome ? "42px" : "38px",
-                height: isWelcome ? "42px" : "38px",
+                width: "34px",
+                height: "34px",
                 border: "1px solid var(--border-color)",
                 color: isRecording ? "var(--primary)" : "var(--text-color-muted)",
                 background: isRecording ? "var(--glow-color)" : "transparent",
@@ -1409,7 +1407,7 @@ const App: React.FC = () => {
             >
               <Icon
                 name={isRecording ? "mic" : "mic_none"}
-                size={isWelcome ? 21 : 19}
+                size={17}
               />
             </button>
 
@@ -1420,18 +1418,18 @@ const App: React.FC = () => {
               title={`Send Message (${shortcuts.sendMessage})`}
               className="flex items-center justify-center rounded-full transition-all"
               style={{
-                width: isWelcome ? "44px" : "40px",
-                height: isWelcome ? "44px" : "40px",
+                width: "34px",
+                height: "34px",
                 background: canSend ? "#b1624d" : "rgba(177,98,77,0.25)",
                 color: "white",
                 border: "none",
                 boxShadow: canSend
-                  ? "0 4px 14px rgba(177,98,77,0.28)"
+                  ? "0 3px 10px rgba(177,98,77,0.25)"
                   : "none",
                 cursor: canSend ? "pointer" : "not-allowed",
               }}
             >
-              <Icon name="send" filled size={isWelcome ? 19 : 18} />
+              <Icon name="send" filled size={16} />
             </button>
           </div>
         </div>
