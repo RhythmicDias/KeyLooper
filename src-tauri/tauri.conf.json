@@ -13,10 +13,10 @@
     "windows": [
       {
         "title": "KeyLooper",
-        "width": 1024,
+        "width": 1080,
         "height": 768,
-        "minWidth": 800,
-        "minHeight": 600,
+        "minWidth": 960,
+        "minHeight": 640,
         "center": true,
         "dragDropEnabled": false,
         "decorations": false

@@ -1804,8 +1804,14 @@ const App: React.FC = () => {
                WELCOME VIEW — vertically centered
             ────────────────────────────────────────── */
             <div
-              className="flex-1 flex flex-col items-center justify-center px-8 fade-in"
-              style={{ minHeight: "100%", paddingBottom: "96px" }}
+              className="flex-1 flex flex-col items-center justify-center fade-in"
+              style={{
+                minHeight: "100%",
+                paddingLeft: isSidebarOpen ? "32px" : "24px",
+                paddingRight: "24px",
+                paddingBottom: "96px",
+                transition: "padding-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
             >
               <div style={{ color: "var(--tertiary)", marginBottom: "18px" }}>
                 <Icon
@@ -1868,9 +1874,12 @@ const App: React.FC = () => {
             ────────────────────────────────────────── */
             <div className="flex-1 relative overflow-hidden">
               <div
-                className="absolute inset-0 overflow-y-auto px-6 pt-6"
+                className="absolute inset-0 overflow-y-auto pt-6"
                 style={{
+                  paddingLeft: isSidebarOpen ? "32px" : "24px",
+                  paddingRight: "24px",
                   paddingBottom: isDockVisible ? "220px" : "140px",
+                  transition: "padding-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
                 }}
               >
                 <div
@@ -1996,12 +2005,14 @@ const App: React.FC = () => {
 
               {/* Active Chat Input Bar */}
               <div
-                className="absolute bottom-0 left-0 right-0 px-6 pointer-events-none flex flex-col justify-end"
+                className="absolute bottom-0 left-0 right-0 pointer-events-none flex flex-col justify-end"
                 style={{
+                  paddingLeft: isSidebarOpen ? "32px" : "24px",
+                  paddingRight: "24px",
                   paddingBottom: isDockVisible ? "78px" : "20px",
                   paddingTop: "16px",
                   zIndex: 10,
-                  transition: "padding-bottom 0.35s ease",
+                  transition: "padding-bottom 0.35s ease, padding-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
                 }}
               >
                 <div className="pointer-events-auto">
@@ -2021,7 +2032,7 @@ const App: React.FC = () => {
           className="fade-in"
           style={{
             position: "fixed",
-            left: "50%",
+            left: isSidebarOpen ? "calc(50% + 130px)" : "50%",
             transform: "translateX(-50%)",
             bottom:
               currentView === "chat" && hasChat
@@ -2154,7 +2165,7 @@ const App: React.FC = () => {
         className="fixed flex items-center floating-dock rounded-2xl shadow-2xl z-40 transition-all duration-500"
         style={{
           bottom: "16px",
-          left: "50%",
+          left: isSidebarOpen ? "calc(50% + 130px)" : "50%",
           transform: isDockVisible ? "translateX(-50%)" : "translateX(-150vw)",
           opacity: isDockVisible ? 1 : 0,
           pointerEvents: isDockVisible ? "auto" : "none",
