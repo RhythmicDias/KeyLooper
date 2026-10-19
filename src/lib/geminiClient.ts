@@ -862,27 +862,58 @@ export async function testKey(
 }
 
 /**
- * Upload a file using Gemini File API (multipart upload) to track progress.
+ * Upload a file using Gemini File API Resumable Upload protocol.
+ * Resumable upload avoids CORS/gateway payload size bottlenecks for multi-minute audio, video, and large documents.
  * Returns the file URI and MIME type.
  */
-export function uploadFileToGemini(
+export async function uploadFileToGemini(
   file: File,
   apiKey: string,
   onProgress?: (percent: number) => void
 ): Promise<{ fileUri: string; mimeType: string }> {
+  const mimeType = file.type || "application/octet-stream";
+
+  // Step 1: Initiate Resumable Upload Session
+  const initUrl = `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`;
+  const initRes = await fetch(initUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Upload-Protocol": "resumable",
+      "X-Goog-Upload-Command": "start",
+      "X-Goog-Upload-Header-Content-Length": String(file.size),
+      "X-Goog-Upload-Header-Content-Type": mimeType,
+    },
+    body: JSON.stringify({
+      file: {
+        display_name: file.name,
+      },
+    }),
+  });
+
+  if (!initRes.ok) {
+    let errText = "";
+    try {
+      const errJson = await initRes.json();
+      errText = errJson?.error?.message || "";
+    } catch {
+      errText = await initRes.text();
+    }
+    throw new Error(`Failed to initiate file upload session: ${errText || initRes.statusText}`);
+  }
+
+  const uploadUrl = initRes.headers.get("x-goog-upload-url") || initRes.headers.get("X-Goog-Upload-Url");
+  if (!uploadUrl) {
+    throw new Error("Gemini server did not return an upload session URL (X-Goog-Upload-Url header missing).");
+  }
+
+  // Step 2: Upload file binary to the session URL with progress tracking via XMLHttpRequest
   return new Promise((resolve, reject) => {
-    const url = `https://generativelanguage.googleapis.com/upload/v1beta/files?uploadType=multipart`;
-
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", url, true);
-
-    const boundary =
-      "------UploadBoundary" + Math.random().toString(36).substring(2);
-    xhr.setRequestHeader(
-      "Content-Type",
-      "multipart/related; boundary=" + boundary
-    );
-    xhr.setRequestHeader("x-goog-api-key", apiKey);
+    xhr.open("POST", uploadUrl, true);
+    xhr.setRequestHeader("Content-Length", String(file.size));
+    xhr.setRequestHeader("X-Goog-Upload-Offset", "0");
+    xhr.setRequestHeader("X-Goog-Upload-Command", "upload, finalize");
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) {
@@ -896,10 +927,10 @@ export function uploadFileToGemini(
           const response = JSON.parse(xhr.responseText);
           resolve({
             fileUri: response.file.uri,
-            mimeType: response.file.mimeType,
+            mimeType: response.file.mimeType || mimeType,
           });
         } catch {
-          reject(new Error("Failed to parse upload response"));
+          reject(new Error("Failed to parse Gemini upload response."));
         }
       } else {
         let errText = xhr.responseText;
@@ -907,24 +938,13 @@ export function uploadFileToGemini(
           const json = JSON.parse(xhr.responseText);
           if (json.error && json.error.message) errText = json.error.message;
         } catch {}
-        reject(new Error(`Upload failed: ${errText}`));
+        reject(new Error(`Upload failed: ${errText || xhr.statusText}`));
       }
     };
 
     xhr.onerror = () =>
-      reject(new Error("Upload failed due to network/CORS error."));
+      reject(new Error("Upload failed due to network/CORS error during file transfer."));
 
-    const metadata = JSON.stringify({ file: { display_name: file.name } });
-
-    const preBlob = new Blob([
-      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: ${
-        file.type || "application/octet-stream"
-      }\r\n\r\n`,
-    ]);
-    const postBlob = new Blob([`\r\n--${boundary}--\r\n`]);
-
-    const body = new Blob([preBlob, file, postBlob]);
-
-    xhr.send(body);
+    xhr.send(file);
   });
 }
