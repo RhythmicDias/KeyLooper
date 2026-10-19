@@ -40,4 +40,23 @@ describe("Autonomous Local File Agent Payload", () => {
     expect(payload.systemInstruction).toBeUndefined();
     expect(payload.tools).toBeUndefined();
   });
+
+  it("injects create_docx_file tool and anti-python instructions for DOCX Assistant", () => {
+    const docxPrompt =
+      "You are an expert document generator and DOCX assistant. Format, write, and structure documents, reports, templates, and clinical letters with clean headings, tables, bullet points, and professional formatting ready for export to Word (.docx).";
+    const payload = buildPayload(
+      "gemini-2.5-flash",
+      [],
+      [{ text: "Generate the pediatric neurology report for this patient." }],
+      docxPrompt
+    );
+
+    expect(payload.systemInstruction?.parts[0]?.text).toContain("LOCAL WORD/DOCX FILE EXPORT ACTIVE");
+    expect(payload.systemInstruction?.parts[0]?.text).toContain("NEVER output Python code");
+
+    const tools = payload.tools?.[0]?.functionDeclarations;
+    expect(tools).toBeDefined();
+    const docxTool = tools.find((t: any) => t.name === "create_docx_file");
+    expect(docxTool).toBeDefined();
+  });
 });

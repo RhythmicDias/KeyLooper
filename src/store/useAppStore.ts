@@ -196,7 +196,7 @@ export const DEFAULT_SKILLS: Skill[] = [
     id: "skill-docx-assistant",
     name: "DOCX Assistant",
     systemPrompt:
-      "You are an expert document generator and DOCX assistant. Format, write, and structure documents, reports, templates, and clinical letters with clean headings, tables, bullet points, and professional formatting ready for export to Word (.docx).",
+      "You are an expert document generator and DOCX assistant. Format, write, and structure documents, reports, templates, and clinical letters with clean headings, tables, bullet points, and professional formatting ready for export to Word (.docx). When asked to create or export a document or report, invoke the create_docx_file tool with the complete formatted text and a suggested filename ending in .docx. Never output raw Python code or python-docx scripts.",
     createdAt: 1720600000000,
     updatedAt: 1720600000000,
   },
@@ -715,7 +715,18 @@ export const useAppStore = create<AppState>()(
               .map((s: Skill) => s.id)
           );
 
-          const skillsToKeep = [...existingSkills];
+          const skillsToKeep = existingSkills.map((s: Skill) => {
+            if (
+              s.id === "skill-docx-assistant" &&
+              !s.systemPrompt.includes("create_docx_file")
+            ) {
+              const def = DEFAULT_SKILLS.find(
+                (d) => d.id === "skill-docx-assistant"
+              );
+              if (def) return { ...s, systemPrompt: def.systemPrompt };
+            }
+            return s;
+          });
           for (const defSkill of DEFAULT_SKILLS) {
             if (
               !existingNames.has(defSkill.name.toLowerCase()) &&

@@ -74,41 +74,43 @@ export function buildPayload(
   agentWorkspace?: string | null,
   customContents?: any[]
 ) {
-  const tools: any[] = [];
-  const hasBuiltinTools =
-    Boolean(modelConfig?.tools?.codeExecution) ||
-    Boolean(modelConfig?.tools?.groundingGoogleSearch) ||
-    Boolean(modelConfig?.tools?.urlContext);
-
-  if (modelConfig?.tools?.codeExecution) {
-    tools.push({ code_execution: {} });
-  }
-  if (modelConfig?.tools?.groundingGoogleSearch) {
-    tools.push({ googleSearch: {} });
-  }
-  if (modelConfig?.tools?.urlContext) {
-    tools.push({ url_context: {} });
-  }
-
-  // Only inspect the current user turn (plus system prompt) for explicit file export intent
-  // and only when localFileExport is enabled and no conflicting built-in grounding tools are active.
-  const allowLocalExport = (modelConfig?.tools?.localFileExport ?? true) && !hasBuiltinTools;
-  const currentTurnText = [
+  const fullConversationContext = [
     systemPrompt || "",
+    ...history.slice(-6).flatMap((m) => m.parts.map((p) => p.text || "")),
     ...userParts.map((p) => p.text || ""),
   ]
     .join(" ")
     .toLowerCase();
 
-  const wantsDocxExport =
-    allowLocalExport &&
-    /\b(export\s+docx|save\s+as\s+docx|download\s+docx|save\s+to\s+word|download\s+word|create\s+(?:a\s+)?word|create\s+(?:a\s+)?docx|make\s+(?:a\s+)?docx|generate\s+(?:a\s+)?docx|\.docx)\b/i.test(
-      currentTurnText
+  const isDocxSkill = Boolean(
+    systemPrompt &&
+      /(docx|word document|\.docx|document generator)/i.test(systemPrompt)
+  );
+
+  const mentionsDocx =
+    /(docx|\.docx|word document|word file|export to word|save to word|download word|create word|create a word|export docx|save as docx|download docx|make docx|generate docx)/i.test(
+      fullConversationContext
     );
+
+  const mentionsReportExport =
+    isDocxSkill ||
+    mentionsDocx ||
+    Boolean(
+      /(report|summary|consult note|letter|document)/i.test(
+        fullConversationContext
+      ) &&
+        /(export|save|download|create|generate|file)/i.test(
+          fullConversationContext
+        )
+    );
+
+  const wantsDocxExport =
+    (modelConfig?.tools?.localFileExport ?? true) && mentionsReportExport;
+
   const wantsHtmlExport =
-    allowLocalExport &&
-    /\b(export\s+html|save\s+as\s+html|download\s+html|create\s+(?:a\s+|an\s+)?html\s+file|make\s+(?:a\s+|an\s+)?html\s+file|single\s+html\s+file|\.html)\b/i.test(
-      currentTurnText
+    (modelConfig?.tools?.localFileExport ?? true) &&
+    /(export\s+html|save\s+as\s+html|download\s+html|create\s+(?:a\s+|an\s+)?html\s+file|make\s+(?:a\s+|an\s+)?html\s+file|single\s+html\s+file|\.html)/i.test(
+      fullConversationContext
     );
 
   const functionDeclarations: any[] = [];
@@ -117,12 +119,20 @@ export function buildPayload(
     functionDeclarations.push({
       name: "create_docx_file",
       description:
-        "Generate and save a .docx document to the user's computer. Use this when the user explicitly requests to create or export a Word (.docx) document.",
+        "Generate and save a .docx document to the user's computer. Use this whenever the user requests a document, report, consult note, letter, or Word file.",
       parameters: {
         type: "OBJECT",
         properties: {
-          filename: { type: "STRING", description: "The suggested filename, ending in .docx" },
-          content: { type: "STRING", description: "The raw text content to put into the document" },
+          filename: {
+            type: "STRING",
+            description:
+              "The suggested filename, ending in .docx (e.g. 'pediatric_neuro_report.docx')",
+          },
+          content: {
+            type: "STRING",
+            description:
+              "The complete formatted text content for the document with headings, bullet points, and clinical sections.",
+          },
         },
         required: ["filename", "content"],
       },
@@ -137,7 +147,10 @@ export function buildPayload(
       parameters: {
         type: "OBJECT",
         properties: {
-          filename: { type: "STRING", description: "The suggested filename, ending in .html" },
+          filename: {
+            type: "STRING",
+            description: "The suggested filename, ending in .html",
+          },
           html_content: {
             type: "STRING",
             description:
@@ -221,11 +234,31 @@ export function buildPayload(
     );
   }
 
+  const tools: any[] = [];
   if (functionDeclarations.length > 0) {
     tools.push({ functionDeclarations });
   }
 
+  // Built-in Gemini tools:
+  // Note: Gemini API returns HTTP 400 if code_execution is combined with custom functionDeclarations.
+  // Therefore, only attach code_execution when no functionDeclarations are active.
+  if (modelConfig?.tools?.codeExecution && functionDeclarations.length === 0) {
+    tools.push({ code_execution: {} });
+  }
+  if (modelConfig?.tools?.groundingGoogleSearch) {
+    tools.push({ googleSearch: {} });
+  }
+  if (modelConfig?.tools?.urlContext) {
+    tools.push({ url_context: {} });
+  }
+
   let finalSystemPrompt = systemPrompt || modelConfig?.systemInstructions;
+
+  if (wantsDocxExport) {
+    const docxInstructions = `\n\n[LOCAL WORD/DOCX FILE EXPORT ACTIVE]\nYou have the tool "create_docx_file" available to generate and save Microsoft Word (.docx) documents to the user's computer.\nCRITICAL INSTRUCTION:\nWhen generating, writing, or formatting a document, clinical report, consult note, letter, or file:\n1. You MUST invoke the \`create_docx_file\` tool.\n2. In the \`content\` parameter, provide the complete, beautifully structured text of the document/report with clean headings, bullet points, and clinical details.\n3. In the \`filename\` parameter, suggest an appropriate filename ending with \`.docx\` (e.g. "pediatric_neurology_report.docx").\n4. NEVER output Python code, python-docx scripts, or code blocks to generate the document. Always call \`create_docx_file\` directly.`;
+    finalSystemPrompt = (finalSystemPrompt || "") + docxInstructions;
+  }
+
   if (agentWorkspace) {
     const workspaceInstructions = `\n\n[AUTONOMOUS LOCAL FILE AGENT ACTIVE]\nYou are scoped to workspace: "${agentWorkspace}".\nSafety policy: A safety backup folder "${agentWorkspace}__BACKUP_FOLDER" is maintained in the parent folder.\nYou have tools to list_directory, read_file, and write_file. Always use relative paths from the workspace root. Before claiming an edit is complete, verify files by reading or listing them if needed.`;
     finalSystemPrompt = (finalSystemPrompt || "") + workspaceInstructions;
@@ -532,11 +565,13 @@ export async function sendMessage(
               })(),
             });
 
+            const contentText = (call.args.content || "").trim();
+            const preview = contentText ? `${contentText}\n\n` : "";
             if (filePath) {
               await writeFile(filePath, new Uint8Array(buffer));
-              finalText += `\n\n✅ **Success!** I generated the Word document and you saved it to \`${filePath}\`.`;
+              finalText = `${preview}✅ **Success!** I generated the Word document and you saved it to \`${filePath}\`.`;
             } else {
-              finalText += `\n\n❌ **Cancelled:** You cancelled saving the Word document.`;
+              finalText = `${preview}❌ **Cancelled:** You cancelled saving the Word document.`;
             }
           } catch (e: any) {
             console.error(e);
