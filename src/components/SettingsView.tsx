@@ -79,9 +79,8 @@ const SettingsView: React.FC = () => {
   const [newName, setNewName] = useState("");
   const [newKey, setNewKey] = useState("");
   const [testing, setTesting] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState<
-    "api" | "model" | "shortcuts" | "agent" | "privacy" | "usage"
-  >("api");
+  const activeTab = useAppStore((s) => s.settingsTab);
+  const setActiveTab = useAppStore((s) => s.setSettingsTab);
   const [agentNotice, setAgentNotice] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -472,6 +471,7 @@ const SettingsView: React.FC = () => {
               { id: "agent", label: "File Agent", icon: "folder_open" },
               { id: "privacy", label: "Privacy", icon: "shield" },
               { id: "usage", label: "Usage", icon: "analytics" },
+              { id: "about", label: "About", icon: "info" },
             ] as const
           ).map((tab) => {
             const isActive = activeTab === tab.id;
@@ -2082,6 +2082,271 @@ const SettingsView: React.FC = () => {
             </div>
           );
         })()}
+
+      {activeTab === "about" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Main App Hero Card */}
+          <div
+            style={{
+              padding: "20px 24px",
+              borderRadius: "12px",
+              background: "var(--bg-color)",
+              border: "1px solid var(--border-color)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "16px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div
+                style={{
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "16px",
+                  background: "var(--tertiary-fixed)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "1px solid var(--border-color)",
+                  boxShadow: "0 4px 12px var(--card-shadow)",
+                }}
+              >
+                <Icon name="spa" size={32} style={{ color: "var(--primary)" }} />
+              </div>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <h2
+                    style={{
+                      fontFamily: "'Crimson Pro', serif",
+                      fontSize: "26px",
+                      fontWeight: 700,
+                      color: "var(--text-color)",
+                      margin: 0,
+                      lineHeight: "1.1",
+                    }}
+                  >
+                    KeyLooper
+                  </h2>
+                  <span
+                    style={{
+                      padding: "2px 8px",
+                      borderRadius: "999px",
+                      fontSize: "11px",
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontWeight: 600,
+                      background: "rgba(177,98,77,0.12)",
+                      color: "var(--primary)",
+                      border: "1px solid rgba(177,98,77,0.25)",
+                    }}
+                  >
+                    v0.1.0
+                  </span>
+                </div>
+                <p
+                  style={{
+                    fontSize: "12.5px",
+                    color: "var(--text-color-muted)",
+                    margin: "4px 0 0 0",
+                    maxWidth: "520px",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  Intelligent rate-limit pool rotator, local workspace file agent, and zero-slop clinical documentation engine for Google Gemini.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const { openUrl } = await import("@tauri-apps/plugin-opener");
+                    await openUrl("https://aistudio.google.com/");
+                  } catch {
+                    window.open("https://aistudio.google.com/", "_blank");
+                  }
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "7px 14px",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  background: "var(--input-bg)",
+                  border: "1px solid var(--border-color)",
+                  color: "var(--text-color)",
+                  cursor: "pointer",
+                }}
+              >
+                <Icon name="key" size={15} style={{ color: "var(--primary)" }} />
+                <span>Google AI Studio</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Developer & Creator Profile */}
+          <div
+            style={{
+              padding: "18px 20px",
+              borderRadius: "12px",
+              background: "var(--bg-color)",
+              border: "1px solid var(--border-color)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+              <Icon name="person" size={18} style={{ color: "var(--primary)" }} />
+              <h3 style={{ fontSize: "14px", fontWeight: 700, margin: 0, color: "var(--text-color)" }}>
+                Creator & Architecture
+              </h3>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+                fontSize: "12.5px",
+                lineHeight: "1.5",
+                color: "var(--text-color)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
+                <span style={{ fontWeight: 700, fontSize: "14px", color: "var(--primary)" }}>
+                  Dr. Stephen Dias
+                </span>
+                <span style={{ fontSize: "12px", color: "var(--text-color-muted)" }}>
+                  Pediatric Neurologist & Application Developer
+                </span>
+              </div>
+              <p style={{ margin: 0, color: "var(--text-color-muted)" }}>
+                Developed to bridge high-throughput AI assistance with clinical workflow precision and zero-interruption developer productivity. KeyLooper automates round-robin Gemini API key cycling to eliminate 429 rate-limit cutoffs during lengthy consult reports, code reviews, and local workspace tasks.
+              </p>
+            </div>
+          </div>
+
+          {/* Architecture & Engineering Highlights */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: "12px",
+            }}
+          >
+            <div
+              style={{
+                padding: "14px 16px",
+                borderRadius: "10px",
+                background: "var(--bg-color)",
+                border: "1px solid var(--border-color)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
+                <Icon name="sync" size={16} style={{ color: "var(--tertiary)" }} />
+                <span style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--text-color)" }}>
+                  Key Rotation Engine
+                </span>
+              </div>
+              <p style={{ fontSize: "11.5px", color: "var(--text-color-muted)", margin: 0, lineHeight: "1.4" }}>
+                Round-robin rotation with exponential backoff cooldown handling, ensuring quota continuity across Gemini Pro, Flash, and Flash-Lite models.
+              </p>
+            </div>
+
+            <div
+              style={{
+                padding: "14px 16px",
+                borderRadius: "10px",
+                background: "var(--bg-color)",
+                border: "1px solid var(--border-color)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
+                <Icon name="shield" size={16} style={{ color: "#6b8a7a" }} />
+                <span style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--text-color)" }}>
+                  OS-Level Security
+                </span>
+              </div>
+              <p style={{ fontSize: "11.5px", color: "var(--text-color-muted)", margin: 0, lineHeight: "1.4" }}>
+                Zero plain-text secret storage. Keys are directly secured via Apple macOS Keychain and Windows Credential Manager using the native OS keyring.
+              </p>
+            </div>
+
+            <div
+              style={{
+                padding: "14px 16px",
+                borderRadius: "10px",
+                background: "var(--bg-color)",
+                border: "1px solid var(--border-color)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
+                <Icon name="description" size={16} style={{ color: "var(--primary)" }} />
+                <span style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--text-color)" }}>
+                  Document Generator
+                </span>
+              </div>
+              <p style={{ fontSize: "11.5px", color: "var(--text-color-muted)", margin: 0, lineHeight: "1.4" }}>
+                Direct compilation to native Microsoft Word (.docx) and HTML clinical documents without python-code leakage, paired with safety workspace backups.
+              </p>
+            </div>
+
+            <div
+              style={{
+                padding: "14px 16px",
+                borderRadius: "10px",
+                background: "var(--bg-color)",
+                border: "1px solid var(--border-color)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
+                <Icon name="laptop_mac" size={16} style={{ color: "var(--secondary)" }} />
+                <span style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--text-color)" }}>
+                  Native Cross-Platform
+                </span>
+              </div>
+              <p style={{ fontSize: "11.5px", color: "var(--text-color-muted)", margin: 0, lineHeight: "1.4" }}>
+                Tauri v2 + Rust core compiled for macOS (Apple Silicon M-series & Intel DMG) and Windows (MSI & NSIS installer).
+              </p>
+            </div>
+          </div>
+
+          {/* Privacy & System Diagnostics */}
+          <div
+            style={{
+              padding: "12px 16px",
+              borderRadius: "10px",
+              background: "var(--input-bg)",
+              border: "1px solid var(--border-color)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "8px",
+              fontSize: "11px",
+              color: "var(--text-color-muted)",
+              fontFamily: "'JetBrains Mono', monospace",
+            }}
+          >
+            <div>
+              <span>Environment: </span>
+              <span style={{ color: "var(--text-color)", fontWeight: 600 }}>
+                {typeof navigator !== "undefined" ? navigator.platform || "Desktop" : "Desktop"}
+              </span>
+              {" • "}
+              <span>Storage: </span>
+              <span style={{ color: "#6b8a7a", fontWeight: 600 }}>Encrypted Local Keyring</span>
+            </div>
+            <div>
+              <span>KeyLooper • Built with care for Clinical & Dev Productivity</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

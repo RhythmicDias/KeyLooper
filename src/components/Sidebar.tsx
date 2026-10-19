@@ -4,7 +4,11 @@
  */
 
 import React, { useState } from "react";
-import { useAppStore, ChatSession } from "../store/useAppStore";
+import {
+  useAppStore,
+  ChatSession,
+  formatShortcutForDisplay,
+} from "../store/useAppStore";
 
 const Icon = ({
   name,
@@ -81,6 +85,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onNewChat }) => {
   const renameSession = useAppStore((s) => s.renameSession);
   const clearAllSessions = useAppStore((s) => s.clearAllSessions);
   const setView = useAppStore((s) => s.setView);
+  const setSettingsTab = useAppStore((s) => s.setSettingsTab);
   const skills = useAppStore((s) => s.skills);
   const shortcuts = useAppStore((s) => s.shortcuts);
 
@@ -518,17 +523,89 @@ const Sidebar: React.FC<SidebarProps> = ({ onNewChat }) => {
           )}
         </div>
 
-        {/* Footer: Clear All */}
-        {sessions.length > 0 && (
-          <div
-            style={{
-              padding: "6px 8px",
-              borderTop: "1px solid var(--border-color)",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+        {/* Footer: Session count & App info */}
+        <div
+          style={{
+            padding: "8px 10px",
+            borderTop: "1px solid var(--border-color)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px",
+            background: "var(--bg-color)",
+          }}
+        >
+          {sessions.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "10px",
+                  fontFamily: "'JetBrains Mono', monospace",
+                  color: "var(--text-color-muted)",
+                }}
+              >
+                {formatShortcutForDisplay(shortcuts.toggleHistory)} to toggle
+              </span>
+              <button
+                onClick={() => {
+                  if (confirm("Clear all chat session history?")) clearAllSessions();
+                }}
+                style={{
+                  padding: "2px 7px",
+                  borderRadius: "5px",
+                  fontSize: "10.5px",
+                  fontFamily: "'JetBrains Mono', monospace",
+                  border: "1px solid rgba(186,26,26,0.25)",
+                  color: "#ba1a1a",
+                  background: "transparent",
+                  cursor: "pointer",
+                }}
+              >
+                Clear All
+              </button>
+            </div>
+          )}
+
+          {/* App & Developer credit link */}
+          <button
+            onClick={() => {
+              setSettingsTab("about");
+              setView("settings");
             }}
+            title="About KeyLooper & Developer Info"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+              padding: "4px 6px",
+              borderRadius: "6px",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              transition: "background 0.15s ease",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--input-bg)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <Icon name="spa" size={14} style={{ color: "var(--primary)" }} />
+              <span
+                style={{
+                  fontFamily: "'Crimson Pro', serif",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "var(--text-color)",
+                }}
+              >
+                KeyLooper <span style={{ fontSize: "11px", fontWeight: 400, color: "var(--text-color-muted)" }}>v0.1.0</span>
+              </span>
+            </div>
             <span
               style={{
                 fontSize: "10px",
@@ -536,27 +613,10 @@ const Sidebar: React.FC<SidebarProps> = ({ onNewChat }) => {
                 color: "var(--text-color-muted)",
               }}
             >
-              {shortcuts.toggleHistory} to toggle
+              by Dr. Stephen Dias
             </span>
-            <button
-              onClick={() => {
-                if (confirm("Clear all chat session history?")) clearAllSessions();
-              }}
-              style={{
-                padding: "2px 7px",
-                borderRadius: "5px",
-                fontSize: "10.5px",
-                fontFamily: "'JetBrains Mono', monospace",
-                border: "1px solid rgba(186,26,26,0.25)",
-                color: "#ba1a1a",
-                background: "transparent",
-                cursor: "pointer",
-              }}
-            >
-              Clear All
-            </button>
-          </div>
-        )}
+          </button>
+        </div>
       </div>
     </aside>
   );

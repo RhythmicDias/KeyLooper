@@ -345,6 +345,8 @@ interface AppState {
   toggleSidebar: () => void;
   currentView: "chat" | "settings" | "skills";
   setView: (view: "chat" | "settings" | "skills") => void;
+  settingsTab: "api" | "model" | "shortcuts" | "agent" | "privacy" | "usage" | "about";
+  setSettingsTab: (tab: "api" | "model" | "shortcuts" | "agent" | "privacy" | "usage" | "about") => void;
   isLoading: boolean;
   setLoading: (loading: boolean) => void;
 
@@ -685,6 +687,8 @@ export const useAppStore = create<AppState>()(
       toggleSidebar: () => set((s) => ({ isSidebarOpen: !s.isSidebarOpen })),
       currentView: "chat",
       setView: (view) => set({ currentView: view }),
+      settingsTab: "api",
+      setSettingsTab: (settingsTab) => set({ settingsTab }),
       isLoading: false,
       setLoading: (loading) => set({ isLoading: loading }),
 
