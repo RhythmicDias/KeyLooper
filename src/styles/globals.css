@@ -21,7 +21,6 @@
   --dock-bg: rgba(255, 255, 255, 0.85);
   --bento-bg: rgba(255, 255, 255, 0.70);
   --bento-border: rgba(138, 129, 122, 0.20);
-  --bento-hover-border: rgba(177, 98, 77, 0.30);
   --modal-bg: rgba(252, 250, 248, 0.95);
   --modal-border: rgba(213, 205, 197, 0.40);
   --glow-color: rgba(177, 98, 77, 0.15);
@@ -57,7 +56,6 @@
   --dock-bg: rgba(67, 62, 58, 0.85);
   --bento-bg: rgba(255, 255, 255, 0.03);
   --bento-border: rgba(213, 205, 197, 0.12);
-  --bento-hover-border: rgba(177, 98, 77, 0.4);
   --modal-bg: rgba(53, 48, 44, 0.95);
   --modal-border: rgba(213, 205, 197, 0.2);
   --glow-color: rgba(177, 98, 77, 0.20);
@@ -112,21 +110,6 @@ h1, h2, h3, h4, h5, h6 {
 .font-serif  { font-family: 'Crimson Pro', Georgia, serif; }
 .font-mono   { font-family: 'JetBrains Mono', monospace; }
 
-/* ─── Bento card (action chips) ────────────────────────── */
-.bento-card {
-  background: var(--bento-bg);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--bento-border);
-  border-radius: 1.5rem;
-  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
-}
-.bento-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 30px rgba(67,62,58,0.08);
-  border-color: var(--bento-hover-border);
-  background: var(--input-bg);
-}
-.bento-card:active { transform: scale(0.97); }
 
 /* ─── Floating dock ─────────────────────────────────────── */
 .floating-dock {

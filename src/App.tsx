@@ -68,14 +68,6 @@ const Icon = ({
   </span>
 );
 
-// ─── Bento chips ───────────────────────────────────────────
-const CHIPS = [
-  { icon: "school", label: "Learn" },
-  { icon: "edit", label: "Write" },
-  { icon: "code_blocks", label: "Code" },
-  { icon: "coffee", label: "Life stuff" },
-  { icon: "lightbulb", label: "News Today" },
-];
 
 // ─── Dock item ─────────────────────────────────────────────
 const DockItem: React.FC<{
@@ -1844,44 +1836,9 @@ const App: React.FC = () => {
 
               <div
                 className="w-full fade-in-delay-1"
-                style={{ maxWidth: "760px", marginBottom: "32px" }}
+                style={{ maxWidth: "760px" }}
               >
                 {renderInputCard(true)}
-              </div>
-
-              {/* Bento chips */}
-              <div
-                className="flex flex-wrap justify-center fade-in-delay-2"
-                style={{ gap: "12px", maxWidth: "760px" }}
-              >
-                {CHIPS.map((chip) => (
-                  <button
-                    key={chip.label}
-                    onClick={() => handleSend(chip.label)}
-                    className="bento-card flex items-center group"
-                    style={{
-                      padding: "10px 20px",
-                      gap: "10px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <Icon
-                      name={chip.icon}
-                      size={20}
-                      className="illustrative-icon"
-                    />
-                    <span
-                      style={{
-                        fontFamily: "'Crimson Pro', serif",
-                        fontSize: "15.5px",
-                        fontWeight: 500,
-                        color: "var(--text-color)",
-                      }}
-                    >
-                      {chip.label}
-                    </span>
-                  </button>
-                ))}
               </div>
             </div>
           ) : (
