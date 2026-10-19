@@ -60,53 +60,39 @@ export class KeyRotator {
   }
 
   /**
-   * Normal Mode: return the first active key entry.
-   */
-  getActiveKey(): ApiKeyEntry | null {
-    const active = this.activeKeys;
-    if (active.length === 0) return null;
-
-    const key = active[0];
-    this.callCounter = Math.max(this.callCounter + 1, Date.now());
-    key.lastUsed = this.callCounter;
-    const poolEntry = this.keys.find((k) => k.id === key.id);
-    if (poolEntry) poolEntry.lastUsed = this.callCounter;
-    return key;
-  }
-
-  /**
-   * Unlimited Mode: return the next key entry in fair round-robin order.
-   * Uses monotonic Least-Recently-Used (LRU) selection among all active healthy keys
-   * to guarantee perfectly even distribution across all available accounts.
+   * Return the next key entry in sequential round-robin order across all healthy keys.
+   * Uses currentIndex synchronized with persistent store to guarantee strict cyclic rotation
+   * (Key 0 -> Key 1 -> Key 2 -> ... -> Key 0).
    */
   getNextKey(): ApiKeyEntry | null {
     const active = this.activeKeys;
     if (active.length === 0) return null;
 
-    // Pick the active key with the lowest lastUsed sequence (or never used)
-    let bestKey: ApiKeyEntry = active[0];
-    let minTime = bestKey.lastUsed ?? 0;
+    // Pick active key at currentIndex
+    const safeIndex =
+      (this.currentIndex >= 0 ? this.currentIndex : 0) % active.length;
+    const selectedKey = active[safeIndex];
 
-    for (let i = 1; i < active.length; i++) {
-      const candidate = active[i];
-      const candidateTime = candidate.lastUsed ?? 0;
-      if (candidateTime < minTime) {
-        bestKey = candidate;
-        minTime = candidateTime;
-      }
-    }
+    // Monotonically advance pointer for the next call
+    this.currentIndex = (safeIndex + 1) % active.length;
 
     this.callCounter = Math.max(this.callCounter + 1, Date.now());
-    bestKey.lastUsed = this.callCounter;
+    selectedKey.lastUsed = this.callCounter;
 
-    const poolEntry = this.keys.find((k) => k.id === bestKey.id);
+    const poolEntry = this.keys.find((k) => k.id === selectedKey.id);
     if (poolEntry) {
       poolEntry.lastUsed = this.callCounter;
     }
 
-    const poolIndex = this.keys.findIndex((k) => k.id === bestKey.id);
-    this.currentIndex = poolIndex >= 0 ? (poolIndex + 1) % this.keys.length : 0;
-    return poolEntry ?? bestKey;
+    return poolEntry ?? selectedKey;
+  }
+
+  /**
+   * Return the active key. Also rotates sequentially through healthy keys
+   * to guarantee fair rate-limit (RPM/TPM) distribution across all keys.
+   */
+  getActiveKey(): ApiKeyEntry | null {
+    return this.getNextKey();
   }
 
   /**

@@ -51,9 +51,11 @@ describe("KeyRotator", () => {
     expect(rotator.getNextKey()?.id).toBe("1");
   });
 
-  it("getActiveKey always returns the first active key (Normal mode)", () => {
+  it("getActiveKey rotates sequentially across healthy keys", () => {
     const rotator = new KeyRotator(keys);
     expect(rotator.getActiveKey()?.id).toBe("1");
+    expect(rotator.getActiveKey()?.id).toBe("2");
+    expect(rotator.getActiveKey()?.id).toBe("3");
     expect(rotator.getActiveKey()?.id).toBe("1");
   });
 
