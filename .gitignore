@@ -28,6 +28,8 @@ Thumbs.db
 *.sqlite
 config.json
 keys_backup.txt
+*.key
+*.key.pub
 
 # Editor directories and files
 .vscode/*

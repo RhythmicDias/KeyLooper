@@ -88,6 +88,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onNewChat }) => {
   const setSettingsTab = useAppStore((s) => s.setSettingsTab);
   const skills = useAppStore((s) => s.skills);
   const shortcuts = useAppStore((s) => s.shortcuts);
+  const updateAvailable = useAppStore((s) => s.updateAvailable);
 
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -574,10 +575,10 @@ const Sidebar: React.FC<SidebarProps> = ({ onNewChat }) => {
           {/* App & Developer credit link */}
           <button
             onClick={() => {
-              setSettingsTab("about");
+              setSettingsTab(updateAvailable ? "updates" : "about");
               setView("settings");
             }}
-            title="About KeyLooper & Developer Info"
+            title={updateAvailable ? `Update available: v${updateAvailable} (Click to update)` : "About KeyLooper & Developer Info"}
             style={{
               display: "flex",
               alignItems: "center",
@@ -604,6 +605,18 @@ const Sidebar: React.FC<SidebarProps> = ({ onNewChat }) => {
                 }}
               >
                 KeyLooper <span style={{ fontSize: "11px", fontWeight: 400, color: "var(--text-color-muted)" }}>v0.1.0</span>
+                {updateAvailable && (
+                  <span
+                    style={{
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      color: "var(--primary)",
+                      marginLeft: "4px",
+                    }}
+                  >
+                    • v{updateAvailable}
+                  </span>
+                )}
               </span>
             </div>
             <span

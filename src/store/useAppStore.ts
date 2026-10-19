@@ -338,6 +338,10 @@ interface AppState {
   toggleTheme: () => void;
   rotationIndex: number;
   setRotationIndex: (idx: number) => void;
+  autoCheckUpdates: boolean;
+  setAutoCheckUpdates: (enabled: boolean) => void;
+  updateAvailable: string | null;
+  setUpdateAvailable: (version: string | null) => void;
 
   // UI state
   isSidebarOpen: boolean;
@@ -345,8 +349,8 @@ interface AppState {
   toggleSidebar: () => void;
   currentView: "chat" | "settings" | "skills";
   setView: (view: "chat" | "settings" | "skills") => void;
-  settingsTab: "api" | "model" | "shortcuts" | "agent" | "privacy" | "usage" | "about";
-  setSettingsTab: (tab: "api" | "model" | "shortcuts" | "agent" | "privacy" | "usage" | "about") => void;
+  settingsTab: "api" | "model" | "shortcuts" | "agent" | "privacy" | "usage" | "about" | "updates";
+  setSettingsTab: (tab: "api" | "model" | "shortcuts" | "agent" | "privacy" | "usage" | "about" | "updates") => void;
   isLoading: boolean;
   setLoading: (loading: boolean) => void;
 
@@ -680,6 +684,10 @@ export const useAppStore = create<AppState>()(
       toggleTheme: () => set((s) => ({ theme: s.theme === "light" ? "dark" : "light" })),
       rotationIndex: 0,
       setRotationIndex: (rotationIndex) => set({ rotationIndex }),
+      autoCheckUpdates: true,
+      setAutoCheckUpdates: (autoCheckUpdates) => set({ autoCheckUpdates }),
+      updateAvailable: null,
+      setUpdateAvailable: (updateAvailable) => set({ updateAvailable }),
 
       // ── UI State ──────────────────────────────────────────────────────────
       isSidebarOpen: false,

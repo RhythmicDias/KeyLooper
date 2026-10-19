@@ -27,6 +27,7 @@ import {
   getPreviewUrl,
   requiresGeminiFileApi,
 } from "./lib/fileProcessor";
+import { checkForAppUpdate } from "./lib/updater";
 
 function getTimeBasedGreeting() {
   const hour = new Date().getHours();
@@ -175,6 +176,9 @@ const App: React.FC = () => {
   const setSessionWorkspace = useAppStore((s) => s.setSessionWorkspace);
   const agentBackupPath = useAppStore((s) => s.agentBackupPath);
   const setAgentBackupPath = useAppStore((s) => s.setAgentBackupPath);
+  const autoCheckUpdates = useAppStore((s) => s.autoCheckUpdates);
+  const updateAvailable = useAppStore((s) => s.updateAvailable);
+  const setUpdateAvailable = useAppStore((s) => s.setUpdateAvailable);
 
   const activeSkill = activeSession?.skillId
     ? skills.find((s) => s.id === activeSession.skillId)
@@ -532,6 +536,21 @@ const App: React.FC = () => {
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeSession?.messages.length]);
+
+  // Check for software updates on app startup if enabled
+  useEffect(() => {
+    if (!autoCheckUpdates) return;
+    const timer = setTimeout(() => {
+      checkForAppUpdate()
+        .then(({ update }) => {
+          if (update) {
+            setUpdateAvailable(update.version);
+          }
+        })
+        .catch(() => {});
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [autoCheckUpdates, setUpdateAvailable]);
 
   const handleAttach = async (files: FileList | File[]) => {
     setIsAttaching(true);
@@ -2240,7 +2259,7 @@ const App: React.FC = () => {
         {/* Settings */}
         <button
           onClick={() => setView("settings")}
-          title={`Settings (${formatShortcutForDisplay(shortcuts.openSettings)})`}
+          title={`Settings (${formatShortcutForDisplay(shortcuts.openSettings)})${updateAvailable ? " • Update Available!" : ""}`}
           className="flex items-center justify-center rounded-full transition-colors"
           style={{
             width: "36px",
@@ -2255,9 +2274,24 @@ const App: React.FC = () => {
                 : "transparent",
             border: "none",
             cursor: "pointer",
+            position: "relative",
           }}
         >
           <Icon name="settings" size={21} />
+          {updateAvailable && (
+            <span
+              style={{
+                position: "absolute",
+                top: "4px",
+                right: "4px",
+                width: "7px",
+                height: "7px",
+                borderRadius: "50%",
+                background: "var(--primary)",
+                border: "1.5px solid var(--input-bg)",
+              }}
+            />
+          )}
         </button>
       </nav>
     </div>

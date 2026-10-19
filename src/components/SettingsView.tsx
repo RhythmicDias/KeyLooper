@@ -16,6 +16,12 @@ import { testKey } from "../lib/geminiClient";
 import type { KeyStatus } from "../lib/KeyRotator";
 import { invoke } from "@tauri-apps/api/core";
 import { ModelConfigPanel } from "./ModelConfigPanel";
+import {
+  checkForAppUpdate,
+  installAppUpdate,
+  restartApp,
+} from "../lib/updater";
+import type { Update } from "@tauri-apps/plugin-updater";
 
 const STATUS_CFG: Record<KeyStatus, { label: string; color: string; dot: string }> = {
   unchecked: { label: "Unchecked", color: "#8a817a", dot: "#8a817a" },
@@ -91,6 +97,66 @@ const SettingsView: React.FC = () => {
 
   const [newProName, setNewProName] = useState("");
   const [newProKey, setNewProKey] = useState("");
+
+  // Updater states & settings
+  const autoCheckUpdates = useAppStore((s) => s.autoCheckUpdates);
+  const setAutoCheckUpdates = useAppStore((s) => s.setAutoCheckUpdates);
+  const updateAvailable = useAppStore((s) => s.updateAvailable);
+  const setUpdateAvailable = useAppStore((s) => s.setUpdateAvailable);
+
+  const [updateStatus, setUpdateStatus] = useState<
+    "idle" | "checking" | "up-to-date" | "available" | "downloading" | "ready" | "error"
+  >("idle");
+  const [updateObj, setUpdateObj] = useState<Update | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
+  const handleCheckUpdate = async () => {
+    setUpdateStatus("checking");
+    setUpdateError(null);
+    try {
+      const { update, error } = await checkForAppUpdate();
+      if (error) {
+        setUpdateStatus("error");
+        setUpdateError(error);
+        setUpdateAvailable(null);
+      } else if (update) {
+        setUpdateObj(update);
+        setUpdateStatus("available");
+        setUpdateAvailable(update.version);
+      } else {
+        setUpdateStatus("up-to-date");
+        setUpdateAvailable(null);
+      }
+    } catch (err: any) {
+      setUpdateStatus("error");
+      setUpdateError(err?.message || String(err));
+    }
+  };
+
+  const handleInstallUpdate = async () => {
+    if (!updateObj) return;
+    setUpdateStatus("downloading");
+    setDownloadProgress(0);
+    setUpdateError(null);
+    try {
+      await installAppUpdate(updateObj, (pct) => {
+        setDownloadProgress(pct);
+      });
+      setUpdateStatus("ready");
+    } catch (err: any) {
+      setUpdateStatus("error");
+      setUpdateError(err?.message || String(err));
+    }
+  };
+
+  const handleRestart = async () => {
+    try {
+      await restartApp();
+    } catch (err: any) {
+      setUpdateError(`Restart failed: ${err?.message || err}`);
+    }
+  };
 
   // Shortcut recording state
   const [recordingAction, setRecordingAction] = useState<ShortcutAction | null>(
@@ -471,10 +537,12 @@ const SettingsView: React.FC = () => {
               { id: "agent", label: "File Agent", icon: "folder_open" },
               { id: "privacy", label: "Privacy", icon: "shield" },
               { id: "usage", label: "Usage", icon: "analytics" },
+              { id: "updates", label: "Updates", icon: "system_update" },
               { id: "about", label: "About", icon: "info" },
             ] as const
           ).map((tab) => {
             const isActive = activeTab === tab.id;
+            const hasUpdate = tab.id === "updates" && Boolean(updateAvailable);
             return (
               <button
                 key={tab.id}
@@ -498,10 +566,22 @@ const SettingsView: React.FC = () => {
                     : "1px solid transparent",
                   color: isActive ? "var(--primary)" : "var(--text-color-muted)",
                   transition: "all 0.15s",
+                  position: "relative",
                 }}
               >
                 <Icon name={tab.icon} size={15} />
                 <span>{tab.label}</span>
+                {hasUpdate && (
+                  <span
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      borderRadius: "50%",
+                      background: "var(--primary)",
+                      display: "inline-block",
+                    }}
+                  />
+                )}
               </button>
             );
           })}
@@ -2187,6 +2267,30 @@ const SettingsView: React.FC = () => {
                 <Icon name="key" size={15} style={{ color: "var(--primary)" }} />
                 <span>Google AI Studio</span>
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("updates");
+                  handleCheckUpdate();
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "7px 14px",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  background: "var(--input-bg)",
+                  border: "1px solid var(--border-color)",
+                  color: "var(--primary)",
+                  cursor: "pointer",
+                }}
+              >
+                <Icon name="system_update" size={15} />
+                <span>Check for Updates</span>
+              </button>
             </div>
           </div>
 
@@ -2344,6 +2448,392 @@ const SettingsView: React.FC = () => {
             <div>
               <span>KeyLooper • Built with care for Clinical & Dev Productivity</span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Updates Tab ────────────────────────────────────────────── */}
+      {activeTab === "updates" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Version & Status Card */}
+          <div
+            style={{
+              padding: "18px 20px",
+              borderRadius: "12px",
+              background: "var(--input-bg)",
+              border: "1px solid var(--border-color)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "14px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: "12px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div
+                  style={{
+                    width: "42px",
+                    height: "42px",
+                    borderRadius: "10px",
+                    background: "rgba(107, 138, 122, 0.12)",
+                    border: "1px solid rgba(107, 138, 122, 0.25)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--primary)",
+                  }}
+                >
+                  <Icon name="system_update" size={24} />
+                </div>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <h3 style={{ fontSize: "16px", fontWeight: 700, margin: 0, color: "var(--text-color)" }}>
+                      KeyLooper
+                    </h3>
+                    <span
+                      style={{
+                        padding: "2px 8px",
+                        borderRadius: "6px",
+                        fontSize: "11px",
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontWeight: 600,
+                        background: "var(--bg-color)",
+                        border: "1px solid var(--border-color)",
+                        color: "var(--primary)",
+                      }}
+                    >
+                      v0.1.0
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: "12px", color: "var(--text-color-muted)" }}>
+                    Official Distribution • Release Channel: GitHub Releases
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCheckUpdate}
+                disabled={updateStatus === "checking" || updateStatus === "downloading"}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "7px",
+                  padding: "7px 16px",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: updateStatus === "checking" || updateStatus === "downloading" ? "not-allowed" : "pointer",
+                  background: "var(--primary)",
+                  color: "#ffffff",
+                  border: "none",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+                  transition: "opacity 0.15s",
+                  opacity: updateStatus === "checking" || updateStatus === "downloading" ? 0.7 : 1,
+                }}
+              >
+                <Icon
+                  name={updateStatus === "checking" ? "sync" : "refresh"}
+                  size={16}
+                  style={updateStatus === "checking" ? { animation: "spin 1s linear infinite" } : undefined}
+                />
+                <span>{updateStatus === "checking" ? "Checking Releases..." : "Check for Updates"}</span>
+              </button>
+            </div>
+
+            {/* Status Feedback Box */}
+            {updateStatus === "up-to-date" && (
+              <div
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: "8px",
+                  background: "rgba(107, 138, 122, 0.12)",
+                  border: "1px solid rgba(107, 138, 122, 0.3)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  color: "#344e40",
+                  fontSize: "12.5px",
+                }}
+              >
+                <Icon name="check_circle" size={18} style={{ color: "#6b8a7a" }} />
+                <span><strong>KeyLooper is up to date!</strong> You are running the latest version (v0.1.0).</span>
+              </div>
+            )}
+
+            {updateStatus === "available" && updateObj && (
+              <div
+                style={{
+                  padding: "14px 16px",
+                  borderRadius: "10px",
+                  background: "rgba(122, 92, 0, 0.08)",
+                  border: "1px solid rgba(201, 162, 39, 0.35)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Icon name="new_releases" size={20} style={{ color: "#c9a227" }} />
+                    <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-color)" }}>
+                      New Version Available: v{updateObj.version}
+                    </span>
+                    {updateObj.date && (
+                      <span style={{ fontSize: "11.5px", color: "var(--text-color-muted)" }}>
+                        ({new Date(updateObj.date).toLocaleDateString()})
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleInstallUpdate}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 14px",
+                      borderRadius: "7px",
+                      fontSize: "12.5px",
+                      fontWeight: 600,
+                      background: "#344e40",
+                      color: "#ffffff",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Icon name="download" size={16} />
+                    <span>Download & Install</span>
+                  </button>
+                </div>
+                {updateObj.body && (
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "var(--text-color-muted)",
+                      background: "var(--bg-color)",
+                      padding: "10px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--border-color)",
+                      whiteSpace: "pre-wrap",
+                      maxHeight: "150px",
+                      overflowY: "auto",
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}
+                  >
+                    {updateObj.body}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {updateStatus === "downloading" && (
+              <div
+                style={{
+                  padding: "14px 16px",
+                  borderRadius: "10px",
+                  background: "rgba(107, 138, 122, 0.08)",
+                  border: "1px solid rgba(107, 138, 122, 0.25)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px" }}>
+                  <span style={{ fontWeight: 600, color: "var(--text-color)" }}>
+                    Downloading and verifying update package...
+                  </span>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: "var(--primary)" }}>
+                    {downloadProgress}%
+                  </span>
+                </div>
+                <div
+                  style={{
+                    width: "100%",
+                    height: "6px",
+                    background: "var(--border-color)",
+                    borderRadius: "3px",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${downloadProgress}%`,
+                      height: "100%",
+                      background: "var(--primary)",
+                      transition: "width 0.2s ease",
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {updateStatus === "ready" && (
+              <div
+                style={{
+                  padding: "14px 16px",
+                  borderRadius: "10px",
+                  background: "rgba(52, 78, 64, 0.12)",
+                  border: "1px solid rgba(52, 78, 64, 0.35)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "10px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <Icon name="task_alt" size={22} style={{ color: "#344e40" }} />
+                  <div>
+                    <div style={{ fontSize: "13.5px", fontWeight: 700, color: "var(--text-color)" }}>
+                      Update Installed Successfully!
+                    </div>
+                    <div style={{ fontSize: "12px", color: "var(--text-color-muted)" }}>
+                      Restart KeyLooper now to complete the update and launch the new version.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRestart}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "7px 16px",
+                    borderRadius: "8px",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    background: "var(--primary)",
+                    color: "#ffffff",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  <Icon name="restart_alt" size={16} />
+                  <span>Restart App</span>
+                </button>
+              </div>
+            )}
+
+            {updateStatus === "error" && updateError && (
+              <div
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: "8px",
+                  background: "rgba(249, 218, 214, 0.9)",
+                  border: "1px solid rgba(186, 26, 26, 0.25)",
+                  color: "#ba1a1a",
+                  fontSize: "12px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600 }}>
+                  <Icon name="info" size={16} />
+                  <span>Update check completed:</span>
+                </div>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", opacity: 0.9 }}>
+                  {updateError}
+                </div>
+                <div style={{ fontSize: "11.5px", marginTop: "4px", color: "#5c1d1d" }}>
+                  Note: If you haven't published a release on GitHub yet, this is expected. Once you push a tag (e.g. <code>v0.1.0</code>) and GitHub Actions compiles the release assets, updates will check and download seamlessly.
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Preferences Card */}
+          <div
+            style={{
+              padding: "16px 20px",
+              borderRadius: "12px",
+              background: "var(--input-bg)",
+              border: "1px solid var(--border-color)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+            }}
+          >
+            <h4 style={{ margin: 0, fontSize: "13.5px", fontWeight: 700, color: "var(--text-color)" }}>
+              Update Preferences
+            </h4>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={autoCheckUpdates}
+                onChange={(e) => setAutoCheckUpdates(e.target.checked)}
+                style={{
+                  width: "16px",
+                  height: "16px",
+                  accentColor: "var(--primary)",
+                  cursor: "pointer",
+                }}
+              />
+              <div>
+                <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-color)" }}>
+                  Check for updates automatically on startup
+                </div>
+                <div style={{ fontSize: "11.5px", color: "var(--text-color-muted)" }}>
+                  Periodically checks GitHub Releases in the background and notifies you when a new release is available.
+                </div>
+              </div>
+            </label>
+          </div>
+
+          {/* Publishing Guide / Architecture Card */}
+          <div
+            style={{
+              padding: "16px 20px",
+              borderRadius: "12px",
+              background: "var(--bg-color)",
+              border: "1px solid var(--border-color)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "8px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Icon name="verified" size={16} style={{ color: "var(--primary)" }} />
+              <h4 style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: "var(--text-color)" }}>
+                Cryptographic Code Signing & GitHub Action Automation
+              </h4>
+            </div>
+            <p style={{ margin: 0, fontSize: "12px", color: "var(--text-color-muted)", lineHeight: "1.5" }}>
+              All update packages are cryptographically signed using Minisign public-key signatures before being applied. When you are ready to publish a new release, tag your commit and push:
+            </p>
+            <div
+              style={{
+                padding: "8px 12px",
+                borderRadius: "6px",
+                background: "var(--input-bg)",
+                border: "1px solid var(--border-color)",
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "11.5px",
+                color: "var(--text-color)",
+              }}
+            >
+              git tag v0.1.0 && git push origin v0.1.0
+            </div>
+            <p style={{ margin: 0, fontSize: "11.5px", color: "var(--text-color-muted)", lineHeight: "1.4" }}>
+              GitHub Actions will automatically compile the macOS (.dmg) and Windows (.msi / .exe) bundles, sign them, upload <code>latest.json</code>, and deliver in-app updates to all users.
+            </p>
           </div>
         </div>
       )}
