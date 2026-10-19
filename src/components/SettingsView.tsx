@@ -2796,45 +2796,6 @@ const SettingsView: React.FC = () => {
               </div>
             </label>
           </div>
-
-          {/* Publishing Guide / Architecture Card */}
-          <div
-            style={{
-              padding: "16px 20px",
-              borderRadius: "12px",
-              background: "var(--bg-color)",
-              border: "1px solid var(--border-color)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "8px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Icon name="verified" size={16} style={{ color: "var(--primary)" }} />
-              <h4 style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: "var(--text-color)" }}>
-                Cryptographic Code Signing & GitHub Action Automation
-              </h4>
-            </div>
-            <p style={{ margin: 0, fontSize: "12px", color: "var(--text-color-muted)", lineHeight: "1.5" }}>
-              All update packages are cryptographically signed using Minisign public-key signatures before being applied. When you are ready to publish a new release, tag your commit and push:
-            </p>
-            <div
-              style={{
-                padding: "8px 12px",
-                borderRadius: "6px",
-                background: "var(--input-bg)",
-                border: "1px solid var(--border-color)",
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: "11.5px",
-                color: "var(--text-color)",
-              }}
-            >
-              git tag v0.1.0 && git push origin v0.1.0
-            </div>
-            <p style={{ margin: 0, fontSize: "11.5px", color: "var(--text-color-muted)", lineHeight: "1.4" }}>
-              GitHub Actions will automatically compile the macOS (.dmg) and Windows (.msi / .exe) bundles, sign them, upload <code>latest.json</code>, and deliver in-app updates to all users.
-            </p>
-          </div>
         </div>
       )}
     </div>
