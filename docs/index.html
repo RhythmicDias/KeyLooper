@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KeyLooper — Intelligent Gemini Rate-Limit Engine & Workspace Agent</title>
+  <meta name="description" content="KeyLooper automates round-robin Gemini API key cycling to eliminate 429 rate limits, with local workspace agent sandboxing, OS keyring encryption, and native Word .docx export." />
+  
+  <!-- OpenGraph / Social -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="KeyLooper — Intelligent Gemini Rate-Limit Engine" />
+  <meta property="og:description" content="Eliminate 429 quota exhaustion with automated round-robin Gemini key cycling, sandboxed local workspace agents, and zero-python document generation." />
+  <meta property="og:image" content="img/chat-lite-theme.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="img/favicon.png" />
+
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ─── Design Tokens & Theme Variables ─── */
+    :root {
+      --bg-base: #f8f5f1;
+      --bg-surface: #ffffff;
+      --bg-surface-elevated: #f2eee8;
+      --bg-card: rgba(255, 255, 255, 0.85);
+      --text-main: #35302c;
+      --text-muted: #6e6761;
+      --text-dim: #999088;
+      --primary: #b1624d;
+      --primary-hover: #9c523f;
+      --primary-light: rgba(177, 98, 77, 0.10);
+      --secondary: #8c7d6e;
+      --tertiary: #6b8a7a;
+      --tertiary-light: #d9e5dd;
+      --border: rgba(138, 129, 122, 0.22);
+      --border-focus: rgba(177, 98, 77, 0.45);
+      --shadow-sm: 0 2px 8px rgba(67, 62, 58, 0.04);
+      --shadow-md: 0 8px 24px rgba(67, 62, 58, 0.08);
+      --shadow-lg: 0 20px 48px rgba(67, 62, 58, 0.12);
+      --shadow-window: 0 24px 64px -12px rgba(67, 62, 58, 0.18), 0 0 0 1px var(--border);
+      --header-bg: rgba(248, 245, 241, 0.85);
+      --code-bg: #ece7e0;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+    }
+
+    [data-theme="dark"] {
+      --bg-base: #24201d;
+      --bg-surface: #2d2925;
+      --bg-surface-elevated: #35302c;
+      --bg-card: rgba(45, 41, 37, 0.85);
+      --text-main: #f8f5f1;
+      --text-muted: #cdc5bd;
+      --text-dim: #8f867e;
+      --primary: #c97964;
+      --primary-hover: #d98a75;
+      --primary-light: rgba(201, 121, 100, 0.15);
+      --secondary: #a89889;
+      --tertiary: #84a694;
+      --tertiary-light: rgba(132, 166, 148, 0.18);
+      --border: rgba(213, 205, 197, 0.14);
+      --border-focus: rgba(201, 121, 100, 0.5);
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+      --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.5);
+      --shadow-window: 0 24px 64px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--border);
+      --header-bg: rgba(36, 32, 29, 0.85);
+      --code-bg: #1c1815;
+    }
+
+    /* ─── Reset & Base ─── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3, h4, .serif-font {
+      font-family: 'Crimson Pro', Georgia, serif;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+
+    code, pre, .mono-font {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* ─── Scroll-Driven Reveal Utilities ─── */
+    .reveal-on-scroll {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: opacity, transform;
+    }
+
+    .reveal-on-scroll.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ─── Navigation Header ─── */
+    .site-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--header-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      transition: all 0.3s ease;
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--text-main);
+    }
+
+    .brand-logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      object-fit: contain;
+    }
+
+    .brand-name {
+      font-family: 'Crimson Pro', serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: var(--radius-full);
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid var(--border);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: color 0.15s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--text-main);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* ─── Buttons ─── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      border: 1px solid transparent;
+      user-select: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(177, 98, 77, 0.25);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(177, 98, 77, 0.35);
+    }
+
+    .btn-secondary {
+      background: var(--bg-surface);
+      color: var(--text-main);
+      border-color: var(--border);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--text-muted);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-icon {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-icon:hover {
+      color: var(--text-main);
+      border-color: var(--text-muted);
+    }
+
+    /* ─── Layout Sections ─── */
+    .section-wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 80px 24px;
+    }
+
+    /* ─── Hero Section ─── */
+    .hero {
+      padding-top: 60px;
+      padding-bottom: 50px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      background: var(--primary-light);
+      border: 1px solid var(--border);
+      color: var(--primary);
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    .hero-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    .hero-title {
+      font-size: clamp(38px, 6vw, 68px);
+      color: var(--text-main);
+      margin-bottom: 20px;
+      max-width: 900px;
+      line-height: 1.08;
+    }
+
+    .hero-title em {
+      font-style: italic;
+      color: var(--primary);
+      font-weight: 400;
+    }
+
+    .hero-subtitle {
+      font-size: clamp(16px, 2.2vw, 20px);
+      color: var(--text-muted);
+      max-width: 740px;
+      margin: 0 auto 34px auto;
+      line-height: 1.55;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 40px;
+    }
+
+    .hero-stats {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .hero-stat-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hero-stat-check {
+      color: var(--tertiary);
+    }
+
+    /* ─── Interactive Window Frame / Showcase ─── */
+    .showcase-area {
+      width: 100%;
+      max-width: 1060px;
+      margin: 40px auto 0 auto;
+    }
+
+    .showcase-tabs {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .showcase-tab-btn {
+      padding: 7px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 12.5px;
+      font-weight: 600;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .showcase-tab-btn.active {
+      background: var(--bg-surface);
+      color: var(--primary);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+    }
+
+    .window-frame {
+      border-radius: var(--radius-lg);
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-window);
+      overflow: hidden;
+      transition: box-shadow 0.3s ease;
+    }
+
+    .window-titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      background: var(--bg-surface-elevated);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .window-dots {
+      display: flex;
+      gap: 7px;
+    }
+
+    .window-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .dot-close { background: #ff5f56; }
+    .dot-min { background: #ffbd2e; }
+    .dot-max { background: #27c93f; }
+
+    .window-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      color: var(--text-dim);
+    }
+
+    .window-content {
+      position: relative;
+      background: var(--bg-base);
+      line-height: 0;
+    }
+
+    .window-img {
+      width: 100%;
+      height: auto;
+      display: block;
+      transition: opacity 0.25s ease;
+    }
+
+    /* ─── Problem vs Solution Section ─── */
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin-top: 40px;
+    }
+
+    .comparison-card {
+      padding: 32px 28px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      backdrop-filter: blur(8px);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .comparison-card.accented {
+      border-color: rgba(177, 98, 77, 0.35);
+      background: linear-gradient(180deg, var(--bg-card) 0%, var(--primary-light) 100%);
+    }
+
+    .card-badge {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      width: fit-content;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-bad {
+      background: rgba(186, 26, 26, 0.12);
+      color: #ba1a1a;
+      border: 1px solid rgba(186, 26, 26, 0.2);
+    }
+
+    .badge-good {
+      background: rgba(107, 138, 122, 0.15);
+      color: var(--tertiary);
+      border: 1px solid rgba(107, 138, 122, 0.3);
+    }
+
+    .card-title {
+      font-size: 24px;
+      color: var(--text-main);
+    }
+
+    .card-desc {
+      font-size: 14.5px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .card-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .card-list li {
+      font-size: 13.5px;
+      color: var(--text-main);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .card-list li svg {
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+
+    /* ─── Feature Matrix Grid ─── */
+    .features-header {
+      text-align: center;
+      max-width: 680px;
+      margin: 0 auto 50px auto;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .feature-box {
+      padding: 28px 24px;
+      border-radius: var(--radius-md);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .feature-box:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--border-focus);
+    }
+
+    .feature-icon-box {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary-light);
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+
+    .feature-icon-box.tertiary {
+      background: var(--tertiary-light);
+      color: var(--tertiary);
+    }
+
+    .feature-box h3 {
+      font-size: 20px;
+      color: var(--text-main);
+    }
+
+    .feature-box p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* ─── Downloads & Installation Section ─── */
+    .download-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 36px;
+    }
+
+    .download-card {
+      padding: 28px 24px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      text-align: left;
+    }
+
+    .download-platform {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .platform-icon {
+      width: 24px;
+      height: 24px;
+      fill: currentColor;
+    }
+
+    .download-card h4 {
+      font-size: 18px;
+      color: var(--text-main);
+    }
+
+    .download-card p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* ─── Code Snippet Block ─── */
+    .terminal-box {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-top: 28px;
+    }
+
+    .terminal-header {
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .terminal-body {
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
+      color: var(--text-main);
+      overflow-x: auto;
+    }
+
+    .terminal-body .cmd {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .terminal-body .comment {
+      color: var(--text-dim);
+    }
+
+    /* ─── Footer ─── */
+    .site-footer {
+      border-top: 1px solid var(--border);
+      background: var(--bg-surface-elevated);
+      padding: 48px 24px 36px 24px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .footer-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .footer-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .footer-links a:hover {
+      color: var(--primary);
+    }
+
+    .footer-bottom {
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* ─── Mobile Responsiveness ─── */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .section-wrap { padding: 50px 18px; }
+      .hero { padding-top: 36px; }
+      .hero-title { font-size: 34px; }
+      .showcase-tabs { flex-wrap: wrap; width: 100%; }
+      .showcase-tab-btn { flex: 1; min-width: 140px; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header class="site-nav">
+    <div class="nav-container">
+      <a href="#" class="brand">
+        <img src="img/icon.png" alt="KeyLooper Logo" class="brand-logo" />
+        <span class="brand-name">KeyLooper</span>
+        <span class="brand-badge">v0.1.0</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#problem">Rate Limits</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#showcase">Interface</a></li>
+        <li><a href="#download">Download</a></li>
+        <li><a href="https://github.com/RhythmicDias/KeyLooper" target="_blank" rel="noopener">GitHub</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <!-- Theme Switcher -->
+        <button id="themeToggleBtn" class="btn-icon" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">
+          <svg id="themeIconSun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg id="themeIconMoon" style="display:none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+
+        <a href="#download" class="btn btn-primary">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Get KeyLooper</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="section-wrap hero">
+    <div class="hero-badge reveal-on-scroll">
+      <span class="hero-badge-dot"></span>
+      <span>Tauri v2 + Rust Core • Continuous Gemini Quota Engine</span>
+    </div>
+
+    <h1 class="hero-title reveal-on-scroll">
+      Zero rate-limit cutoffs.<br />
+      <em>Uninterrupted</em> Gemini intelligence.
+    </h1>
+
+    <p class="hero-subtitle reveal-on-scroll">
+      KeyLooper automates true round-robin API key rotation across multiple Google Gemini accounts, eliminating 429 quota exhaustion. Sandboxed local workspace agents, OS-keyring security, and direct Microsoft Word compilation.
+    </p>
+
+    <div class="hero-actions reveal-on-scroll">
+      <a href="#download" class="btn btn-primary" style="padding: 12px 24px; font-size: 15px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span>Download for Desktop</span>
+      </a>
+
+      <a href="https://github.com/RhythmicDias/KeyLooper" target="_blank" rel="noopener" class="btn btn-secondary" style="padding: 12px 22px; font-size: 15px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+        <span>GitHub Repository</span>
+      </a>
+    </div>
+
+    <div class="hero-stats reveal-on-scroll">
+      <div class="hero-stat-item">
+        <svg class="hero-stat-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span>100% Client-Side Local Execution</span>
+      </div>
+      <div class="hero-stat-item">
+        <svg class="hero-stat-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span>Apple Keychain & Win Credential Vault</span>
+      </div>
+      <div class="hero-stat-item">
+        <svg class="hero-stat-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span>Gemini 2.5 Pro & Flash Ready</span>
+      </div>
+    </div>
+
+    <!-- Interactive Window Showcase -->
+    <div id="showcase" class="showcase-area reveal-on-scroll">
+      <div class="showcase-tabs">
+        <button class="showcase-tab-btn active" data-img="img/chat-lite-theme.png">
+          <span>Day Workspace</span>
+        </button>
+        <button class="showcase-tab-btn" data-img="img/chat-dark-theme.png">
+          <span>Night Workspace</span>
+        </button>
+        <button class="showcase-tab-btn" data-img="img/updates-dark-theme.png">
+          <span>In-App Updater</span>
+        </button>
+        <button class="showcase-tab-btn" data-img="img/about-lite-theme.png">
+          <span>Architecture & Settings</span>
+        </button>
+      </div>
+
+      <div class="window-frame">
+        <div class="window-titlebar">
+          <div class="window-dots">
+            <span class="window-dot dot-close"></span>
+            <span class="window-dot dot-min"></span>
+            <span class="window-dot dot-max"></span>
+          </div>
+          <span class="window-title" id="windowTitleText">KeyLooper — Day Workspace</span>
+          <div style="width: 40px;"></div>
+        </div>
+        <div class="window-content">
+          <img id="showcaseImage" src="img/chat-lite-theme.png" alt="KeyLooper Desktop App Interface" class="window-img" loading="eager" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem vs Solution Section -->
+  <section id="problem" class="section-wrap">
+    <div class="features-header reveal-on-scroll">
+      <div class="card-badge badge-bad" style="margin-bottom: 12px;">The Bottleneck</div>
+      <h2>Why Gemini developers and clinicians hit rate limits</h2>
+      <p style="color: var(--text-muted); font-size: 16px; margin-top: 10px;">
+        Google Gemini's 2.5 Flash and Pro models provide unmatched reasoning and vast context windows, but free and standard developer tiers strictly throttle RPM (requests per minute) and TPM (tokens per minute).
+      </p>
+    </div>
+
+    <div class="comparison-grid">
+      <!-- Old Way -->
+      <div class="comparison-card reveal-on-scroll">
+        <span class="card-badge badge-bad">Standard Clients</span>
+        <h3 class="card-title">Single-Key Stoppage</h3>
+        <p class="card-desc">
+          Single API key configurations quickly exhaust rate limits during multi-turn consult summaries, large document scans, or autonomous script execution.
+        </p>
+        <ul class="card-list">
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ba1a1a" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+            <span>Sudden 429 cutoffs ruin lengthy clinical notes & consult drafts</span>
+          </li>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ba1a1a" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+            <span>Manual copying & pasting keys into settings mid-conversation</span>
+          </li>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ba1a1a" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+            <span>Unsafe plain-text .env or config.json files on user drive</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- KeyLooper Way -->
+      <div class="comparison-card accented reveal-on-scroll">
+        <span class="card-badge badge-good">The KeyLooper Way</span>
+        <h3 class="card-title">Deterministic Fair Rotation</h3>
+        <p class="card-desc">
+          KeyLooper cycles through your pool of Gemini keys in strict monotonic round-robin order. Exponential backoff cleanly absorbs quota spikes with zero user intervention.
+        </p>
+        <ul class="card-list">
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b8a7a" stroke-width="2.2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>True sequential round-robin across unlimited active API keys</span>
+          </li>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b8a7a" stroke-width="2.2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Automatic cooldown & retry keeps long sessions alive</span>
+          </li>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b8a7a" stroke-width="2.2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Hardware OS keyring encryption (macOS Keychain & Win Cred Vault)</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Grid -->
+  <section id="features" class="section-wrap">
+    <div class="features-header reveal-on-scroll">
+      <div class="card-badge badge-good" style="margin-bottom: 12px;">Architecture</div>
+      <h2>Engineered for clinical precision and developer velocity</h2>
+      <p style="color: var(--text-muted); font-size: 16px; margin-top: 10px;">
+        Designed without AI gimmicks. Focused strictly on high reliability, local data privacy, and clean document compilation.
+      </p>
+    </div>
+
+    <div class="features-grid">
+      <!-- 1. Key Rotation -->
+      <div class="feature-box reveal-on-scroll">
+        <div class="feature-icon-box">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </div>
+        <h3>Continuous Key Loop</h3>
+        <p>
+          Monotonic counter rotates your API keys sequentially across conversation turns. Every request uses a fresh quota bucket, preventing RPM/TPM saturation during lengthy reports.
+        </p>
+      </div>
+
+      <!-- 2. Sandboxed File Agent -->
+      <div class="feature-box reveal-on-scroll">
+        <div class="feature-icon-box tertiary">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </div>
+        <h3>Autonomous Workspace Agent</h3>
+        <p>
+          Connect a project workspace for autonomous directory exploration, code reading, and file editing. KeyLooper creates a complete <code>__BACKUP_FOLDER</code> safety snapshot before any changes occur.
+        </p>
+      </div>
+
+      <!-- 3. Zero-Python DOCX Generator -->
+      <div class="feature-box reveal-on-scroll">
+        <div class="feature-icon-box">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </div>
+        <h3>Zero-Slop Document Generator</h3>
+        <p>
+          Client-side compilation directly creates formatted Microsoft Word (<code>.docx</code>) and HTML files. Eliminates leaked python-docx scripts and raw code dumps in consult letters.
+        </p>
+      </div>
+
+      <!-- 4. OS Keyring Encryption -->
+      <div class="feature-box reveal-on-scroll">
+        <div class="feature-icon-box tertiary">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <h3>OS-Level Credential Vault</h3>
+        <p>
+          Zero plain-text secret storage. API keys are directly encrypted in Apple macOS Keychain and Windows Credential Manager using the native OS keyring bridge.
+        </p>
+      </div>
+
+      <!-- 5. In-App Updates -->
+      <div class="feature-box reveal-on-scroll">
+        <div class="feature-icon-box">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        </div>
+        <h3>Cryptographic In-App Updates</h3>
+        <p>
+          Integrated Tauri v2 updater checks GitHub Releases, verifies Minisign public-key signatures, downloads updates in background with real-time progress, and relaunches seamlessly.
+        </p>
+      </div>
+
+      <!-- 6. Native Rust Performance -->
+      <div class="feature-box reveal-on-scroll">
+        <div class="feature-icon-box tertiary">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 14 14"></polyline>
+          </svg>
+        </div>
+        <h3>Sub-Second Native Start</h3>
+        <p>
+          Built on Tauri v2 and Rust. Uses under 45MB of idle RAM, boots in under 400ms, and operates completely offline except when querying Gemini APIs.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Download Section -->
+  <section id="download" class="section-wrap" style="text-align: center;">
+    <div class="features-header reveal-on-scroll">
+      <div class="card-badge badge-good" style="margin-bottom: 12px;">Release v0.1.0</div>
+      <h2>Get KeyLooper for macOS & Windows</h2>
+      <p style="color: var(--text-muted); font-size: 16px; margin-top: 10px;">
+        Native standalone desktop packages compiled directly through GitHub Actions.
+      </p>
+    </div>
+
+    <div class="download-grid">
+      <!-- macOS Apple Silicon -->
+      <div class="download-card reveal-on-scroll">
+        <div class="download-platform">
+          <svg class="platform-icon" viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.88c.61-.75 1.04-1.8 0.92-2.88-.93.04-2.02.63-2.65 1.37-.56.64-1.04 1.71-.92 2.76 1.04.08 2.05-.53 2.65-1.25z"/></svg>
+          <h4>macOS Apple Silicon</h4>
+        </div>
+        <p>M1, M2, M3, M4 Macs (macOS 11+)</p>
+        <div style="font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--text-dim);">KeyLooper_aarch64.dmg</div>
+        <a href="https://github.com/RhythmicDias/KeyLooper/releases/latest" class="btn btn-primary" style="margin-top:auto;">
+          Download .DMG
+        </a>
+      </div>
+
+      <!-- macOS Intel -->
+      <div class="download-card reveal-on-scroll">
+        <div class="download-platform">
+          <svg class="platform-icon" viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.88c.61-.75 1.04-1.8 0.92-2.88-.93.04-2.02.63-2.65 1.37-.56.64-1.04 1.71-.92 2.76 1.04.08 2.05-.53 2.65-1.25z"/></svg>
+          <h4>macOS Intel</h4>
+        </div>
+        <p>Intel x86_64 Macs (macOS 10.15+)</p>
+        <div style="font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--text-dim);">KeyLooper_x86_64.dmg</div>
+        <a href="https://github.com/RhythmicDias/KeyLooper/releases/latest" class="btn btn-primary" style="margin-top:auto;">
+          Download .DMG
+        </a>
+      </div>
+
+      <!-- Windows x64 -->
+      <div class="download-card reveal-on-scroll">
+        <div class="download-platform">
+          <svg class="platform-icon" viewBox="0 0 24 24"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+          <h4>Windows 64-bit</h4>
+        </div>
+        <p>Windows 10 & 11 (x64 Installer / MSI)</p>
+        <div style="font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--text-dim);">KeyLooper_x64_en-US.msi</div>
+        <a href="https://github.com/RhythmicDias/KeyLooper/releases/latest" class="btn btn-primary" style="margin-top:auto;">
+          Download .MSI / .EXE
+        </a>
+      </div>
+    </div>
+
+    <!-- Quick Start Build Commands -->
+    <div class="terminal-box reveal-on-scroll" style="text-align: left;">
+      <div class="terminal-header">
+        <span>Build From Source (Developer Mode)</span>
+        <span>bash</span>
+      </div>
+      <div class="terminal-body">
+        <div class="comment"># 1. Clone KeyLooper repository</div>
+        <div><span class="cmd">git clone</span> https://github.com/RhythmicDias/KeyLooper.git</div>
+        <div><span class="cmd">cd</span> KeyLooper</div>
+        <br />
+        <div class="comment"># 2. Install dependencies & run local desktop development</div>
+        <div><span class="cmd">npm install</span></div>
+        <div><span class="cmd">npm run tauri dev</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-top">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <img src="img/icon.png" alt="KeyLooper" style="width: 24px; height: 24px;" />
+          <span style="font-family:'Crimson Pro', serif; font-size: 19px; font-weight: 700; color: var(--text-main);">KeyLooper</span>
+        </div>
+
+        <div class="footer-links">
+          <a href="#problem">Rate Limits</a>
+          <a href="#features">Features</a>
+          <a href="#download">Download</a>
+          <a href="https://github.com/RhythmicDias/KeyLooper" target="_blank" rel="noopener">GitHub Repository</a>
+          <a href="https://github.com/RhythmicDias/KeyLooper/issues" target="_blank" rel="noopener">Report Issue</a>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>
+          Created & Architected by <strong>Stephen Dias</strong> (Medical Scribe / Application Developer)
+        </div>
+        <div>
+          Released under the <strong>MIT License</strong> • Zero Telemetry • 100% Client-Side
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Minimal Smooth Scroll & Interactive Image Switcher (Zero external libraries) -->
+  <script>
+    // ─── Theme Toggle ───
+    const themeBtn = document.getElementById('themeToggleBtn');
+    const sunIcon = document.getElementById('themeIconSun');
+    const moonIcon = document.getElementById('themeIconMoon');
+    const showcaseImg = document.getElementById('showcaseImage');
+    const windowTitleText = document.getElementById('windowTitleText');
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('keylooper_web_theme', theme);
+      if (theme === 'dark') {
+        sunIcon.style.display = 'none';
+        moonIcon.style.display = 'block';
+        // Auto-switch showcase to dark theme if currently viewing day workspace
+        if (showcaseImg && showcaseImg.src.includes('chat-lite-theme.png')) {
+          setTabActive('img/chat-dark-theme.png', 'KeyLooper — Night Workspace');
+        }
+      } else {
+        sunIcon.style.display = 'block';
+        moonIcon.style.display = 'none';
+        if (showcaseImg && showcaseImg.src.includes('chat-dark-theme.png')) {
+          setTabActive('img/chat-lite-theme.png', 'KeyLooper — Day Workspace');
+        }
+      }
+    }
+
+    const savedTheme = localStorage.getItem('keylooper_web_theme') || 
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    applyTheme(savedTheme);
+
+    themeBtn.addEventListener('click', () => {
+      const cur = document.documentElement.getAttribute('data-theme');
+      applyTheme(cur === 'dark' ? 'light' : 'dark');
+    });
+
+    // ─── Interactive Showcase Tabs ───
+    const tabButtons = document.querySelectorAll('.showcase-tab-btn');
+    function setTabActive(imgSrc, title) {
+      tabButtons.forEach(b => {
+        if (b.getAttribute('data-img') === imgSrc) {
+          b.classList.add('active');
+        } else {
+          b.classList.remove('active');
+        }
+      });
+      if (showcaseImg) {
+        showcaseImg.style.opacity = '0';
+        setTimeout(() => {
+          showcaseImg.src = imgSrc;
+          showcaseImg.onload = () => { showcaseImg.style.opacity = '1'; };
+        }, 150);
+      }
+      if (windowTitleText) {
+        windowTitleText.textContent = title;
+      }
+    }
+
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const src = btn.getAttribute('data-img');
+        const title = 'KeyLooper — ' + btn.textContent.trim();
+        setTabActive(src, title);
+      });
+    });
+
+    // ─── Smooth Lightweight Scroll Reveal (IntersectionObserver) ───
+    const revealElements = document.querySelectorAll('.reveal-on-scroll');
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver((entries, obs) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            obs.unobserve(entry.target);
+          }
+        });
+      }, {
+        threshold: 0.12,
+        rootMargin: '0px 0px -40px 0px'
+      });
+
+      revealElements.forEach(el => observer.observe(el));
+    } else {
+      // Fallback for older browsers
+      revealElements.forEach(el => el.classList.add('is-visible'));
+    }
+  </script>
+</body>
+</html>
