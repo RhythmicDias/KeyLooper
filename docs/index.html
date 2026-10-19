@@ -1037,8 +1037,8 @@
           <h4>macOS Apple Silicon</h4>
         </div>
         <p>M1, M2, M3, M4 Macs (macOS 11+)</p>
-        <div style="font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--text-dim);">KeyLooper_aarch64.dmg</div>
-        <a href="https://github.com/RhythmicDias/KeyLooper/releases/latest" class="btn btn-primary" style="margin-top:auto;">
+        <div id="fileDescMacArm" style="font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--text-dim);">KeyLooper_aarch64.dmg</div>
+        <a id="btnDownloadMacArm" href="https://github.com/RhythmicDias/KeyLooper/releases/latest" class="btn btn-primary" style="margin-top:auto;">
           Download .DMG
         </a>
       </div>
@@ -1050,8 +1050,8 @@
           <h4>macOS Intel</h4>
         </div>
         <p>Intel x86_64 Macs (macOS 10.15+)</p>
-        <div style="font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--text-dim);">KeyLooper_x86_64.dmg</div>
-        <a href="https://github.com/RhythmicDias/KeyLooper/releases/latest" class="btn btn-primary" style="margin-top:auto;">
+        <div id="fileDescMacIntel" style="font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--text-dim);">KeyLooper_x86_64.dmg</div>
+        <a id="btnDownloadMacIntel" href="https://github.com/RhythmicDias/KeyLooper/releases/latest" class="btn btn-primary" style="margin-top:auto;">
           Download .DMG
         </a>
       </div>
@@ -1063,9 +1063,9 @@
           <h4>Windows 64-bit</h4>
         </div>
         <p>Windows 10 & 11 (x64 Installer / MSI)</p>
-        <div style="font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--text-dim);">KeyLooper_x64_en-US.msi</div>
-        <a href="https://github.com/RhythmicDias/KeyLooper/releases/latest" class="btn btn-primary" style="margin-top:auto;">
-          Download .MSI / .EXE
+        <div id="fileDescWin" style="font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--text-dim);">KeyLooper_x64_en-US.msi</div>
+        <a id="btnDownloadWin" href="https://github.com/RhythmicDias/KeyLooper/releases/latest" class="btn btn-primary" style="margin-top:auto;">
+          Download .MSI
         </a>
       </div>
     </div>
@@ -1204,6 +1204,72 @@
       // Fallback for older browsers
       revealElements.forEach(el => el.classList.add('is-visible'));
     }
+
+    // ─── Dynamic GitHub Release Assets Auto-Resolver ───
+    (async function resolveLatestRelease() {
+      const repo = 'RhythmicDias/KeyLooper';
+      try {
+        const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
+          headers: { 'Accept': 'application/vnd.github.v3+json' }
+        });
+        if (!res.ok) return;
+        const release = await res.json();
+        const assets = release.assets || [];
+
+        // Format byte size to human readable (MB)
+        const formatSize = (bytes) => (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+
+        // 1. macOS Apple Silicon (.dmg with aarch64 or arm64)
+        const macArmAsset = assets.find(a => 
+          a.name.endsWith('.dmg') && (a.name.includes('aarch64') || a.name.includes('arm64'))
+        );
+        if (macArmAsset) {
+          const btn = document.getElementById('btnDownloadMacArm');
+          const desc = document.getElementById('fileDescMacArm');
+          if (btn) btn.href = macArmAsset.browser_download_url;
+          if (desc) desc.textContent = `${macArmAsset.name} (${formatSize(macArmAsset.size)})`;
+        }
+
+        // 2. macOS Intel (.dmg with x86_64 or x64)
+        const macIntelAsset = assets.find(a => 
+          a.name.endsWith('.dmg') && (a.name.includes('x86_64') || a.name.includes('x64'))
+        );
+        if (macIntelAsset) {
+          const btn = document.getElementById('btnDownloadMacIntel');
+          const desc = document.getElementById('fileDescMacIntel');
+          if (btn) btn.href = macIntelAsset.browser_download_url;
+          if (desc) desc.textContent = `${macIntelAsset.name} (${formatSize(macIntelAsset.size)})`;
+        }
+
+        // 3. Windows x64 installer (.msi or .exe setup)
+        const winAsset = assets.find(a => 
+          a.name.endsWith('.msi') || 
+          (a.name.endsWith('.exe') && !a.name.endsWith('.exe.sig') && a.name.toLowerCase().includes('setup'))
+        );
+        if (winAsset) {
+          const btn = document.getElementById('btnDownloadWin');
+          const desc = document.getElementById('fileDescWin');
+          if (btn) {
+            btn.href = winAsset.browser_download_url;
+            btn.textContent = winAsset.name.endsWith('.msi') ? 'Download .MSI' : 'Download .EXE';
+          }
+          if (desc) desc.textContent = `${winAsset.name} (${formatSize(winAsset.size)})`;
+        }
+
+        // Update release badge if tag name exists
+        if (release.tag_name) {
+          const badges = document.querySelectorAll('.card-badge.badge-good');
+          badges.forEach(b => {
+            if (b.textContent.includes('Release')) {
+              b.textContent = `Release ${release.tag_name}`;
+            }
+          });
+        }
+      } catch (err) {
+        // Fallback: Default links point to https://github.com/RhythmicDias/KeyLooper/releases/latest
+        console.debug('GitHub releases auto-resolve fallback:', err);
+      }
+    })();
   </script>
 </body>
 </html>
