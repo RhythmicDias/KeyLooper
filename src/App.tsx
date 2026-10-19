@@ -224,7 +224,9 @@ const App: React.FC = () => {
   };
 
   const handleOpenGeminiWeb = async (forceBrowser = false) => {
-    if (forceBrowser) {
+    // On macOS, Google's OAuth engine strictly blocks sign-in inside embedded WKWebView.
+    // Opening directly in their default browser (Safari/Chrome) lets them use their existing Google session seamlessly.
+    if (forceBrowser || isMac) {
       try {
         const { openUrl } = await import("@tauri-apps/plugin-opener");
         await openUrl("https://gemini.google.com/app");
