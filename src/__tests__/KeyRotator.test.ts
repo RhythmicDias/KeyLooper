@@ -9,6 +9,7 @@ import { buildPayload } from "../lib/geminiClient";
 import {
   formatShortcutFromEvent,
   matchesShortcut,
+  formatShortcutForDisplay,
   DEFAULT_MODEL_CONFIG,
 } from "../store/useAppStore";
 
@@ -195,5 +196,25 @@ describe("buildPayload & Shortcut Matching", () => {
     expect(formatShortcutFromEvent(fakeEvent)).toBe("Ctrl+N");
     expect(matchesShortcut(fakeEvent, "Ctrl+N")).toBe(true);
     expect(matchesShortcut(fakeEvent, "Ctrl+Shift+N")).toBe(false);
+  });
+
+  it("handles macOS Meta (Cmd) modifier seamlessly for shortcuts", () => {
+    const fakeMacEvent = {
+      key: "n",
+      code: "KeyN",
+      ctrlKey: false,
+      metaKey: true,
+      altKey: false,
+      shiftKey: false,
+    } as unknown as KeyboardEvent;
+
+    expect(formatShortcutFromEvent(fakeMacEvent)).toBe("Ctrl+N");
+    expect(matchesShortcut(fakeMacEvent, "Ctrl+N")).toBe(true);
+  });
+
+  it("formats shortcuts correctly without throwing", () => {
+    expect(formatShortcutForDisplay("")).toBe("");
+    expect(formatShortcutForDisplay("Enter")).toBe("Enter");
+    expect(typeof formatShortcutForDisplay("Ctrl+N")).toBe("string");
   });
 });

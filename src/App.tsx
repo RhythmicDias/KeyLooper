@@ -17,6 +17,7 @@ import {
   selectAvailableModels,
   selectHealthyKeyCount,
   matchesShortcut,
+  formatShortcutForDisplay,
 } from "./store/useAppStore";
 import { KeyRotator } from "./lib/KeyRotator";
 import { sendMessage, uploadFileToGemini } from "./lib/geminiClient";
@@ -1331,7 +1332,7 @@ const App: React.FC = () => {
                 border: "1px solid var(--border-color)",
                 gap: "5px",
               }}
-              title={`Select Model (${shortcuts.switchModel})`}
+              title={`Select Model (${formatShortcutForDisplay(shortcuts.switchModel)})`}
             >
               <span
                 style={{
@@ -1380,7 +1381,7 @@ const App: React.FC = () => {
             {/* Mic */}
             <button
               onClick={toggleRecording}
-              title={`Voice Dictation (${shortcuts.toggleVoice})`}
+              title={`Voice Dictation (${formatShortcutForDisplay(shortcuts.toggleVoice)})`}
               className="flex items-center justify-center rounded-full transition-colors"
               style={{
                 width: "34px",
@@ -1408,7 +1409,7 @@ const App: React.FC = () => {
             <button
               onClick={() => handleSend()}
               disabled={!canSend}
-              title={`Send Message (${shortcuts.sendMessage})`}
+              title={`Send Message (${formatShortcutForDisplay(shortcuts.sendMessage)})`}
               className="flex items-center justify-center rounded-full transition-all"
               style={{
                 width: "34px",
@@ -1468,7 +1469,7 @@ const App: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={toggleSidebar}
-            title={`${isSidebarOpen ? "Hide" : "Show"} History (${shortcuts.toggleHistory})`}
+            title={`${isSidebarOpen ? "Hide" : "Show"} History (${formatShortcutForDisplay(shortcuts.toggleHistory)})`}
             className="w-9 h-9 flex items-center justify-center rounded-xl transition-colors"
             style={{
               border: "1px solid var(--border-color)",
@@ -1610,7 +1611,7 @@ const App: React.FC = () => {
           ) : (
             <button
               onClick={handleSelectWorkspace}
-              title={`Connect Local Project Workspace (${shortcuts.selectWorkspace})`}
+              title={`Connect Local Project Workspace (${formatShortcutForDisplay(shortcuts.selectWorkspace)})`}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-colors"
               style={{
                 border: "1px dashed var(--border-color)",
@@ -1689,7 +1690,7 @@ const App: React.FC = () => {
               e.preventDefault();
               handleOpenGeminiWeb(true);
             }}
-            title={`Open Google Gemini Web (${shortcuts.openGeminiWeb}) — Right-click or Shift-click to open in external browser`}
+            title={`Open Google Gemini Web (${formatShortcutForDisplay(shortcuts.openGeminiWeb)}) — Right-click or Shift-click to open in external browser`}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-all hover:scale-105 active:scale-95 shadow-sm"
             style={{
               border: "1px solid var(--border-color)",
@@ -1755,7 +1756,7 @@ const App: React.FC = () => {
             onMouseLeave={(e) => {
               e.currentTarget.style.background = "transparent";
             }}
-            title={`Toggle Theme (${shortcuts.toggleTheme})`}
+            title={`Toggle Theme (${formatShortcutForDisplay(shortcuts.toggleTheme)})`}
           >
             <Icon
               name={theme === "light" ? "light_mode" : "dark_mode"}
@@ -2109,7 +2110,7 @@ const App: React.FC = () => {
       {/* Expand Dock Button */}
       <button
         onClick={() => setIsDockVisible(true)}
-        title={`Show Dock (${shortcuts.toggleDock})`}
+        title={`Show Dock (${formatShortcutForDisplay(shortcuts.toggleDock)})`}
         className="fixed z-50 flex items-center justify-center rounded-full shadow-lg transition-all duration-500"
         style={{
           bottom: "16px",
@@ -2144,7 +2145,7 @@ const App: React.FC = () => {
       >
         <button
           onClick={() => setIsDockVisible(false)}
-          title={`Hide Dock (${shortcuts.toggleDock})`}
+          title={`Hide Dock (${formatShortcutForDisplay(shortcuts.toggleDock)})`}
           className="absolute flex items-center justify-center rounded-full shadow transition-colors"
           style={{
             top: "-8px",
@@ -2171,27 +2172,27 @@ const App: React.FC = () => {
         <DockItem
           icon="add"
           label="NEW"
-          title={`New Chat (${shortcuts.newChat})`}
+          title={`New Chat (${formatShortcutForDisplay(shortcuts.newChat)})`}
           onClick={handleNewChat}
         />
         <DockItem
           icon="history"
           label="HISTORY"
           active={isSidebarOpen}
-          title={`Toggle History Sidebar (${shortcuts.toggleHistory})`}
+          title={`Toggle History Sidebar (${formatShortcutForDisplay(shortcuts.toggleHistory)})`}
           onClick={toggleSidebar}
         />
         <DockItem
           icon="deployed_code"
           label="AGENTS"
           active={currentView === "skills"}
-          title={`Agents & Skills (${shortcuts.openSkills})`}
+          title={`Agents & Skills (${formatShortcutForDisplay(shortcuts.openSkills)})`}
           onClick={() => setView("skills")}
         />
         <DockItem
           icon="auto_awesome"
           label="WEB"
-          title={`Google Gemini Web App (${shortcuts.openGeminiWeb}) — Right-click or Shift-click to open in external browser`}
+          title={`Google Gemini Web App (${formatShortcutForDisplay(shortcuts.openGeminiWeb)}) — Right-click or Shift-click to open in external browser`}
           onClick={(e) => handleOpenGeminiWeb(e?.shiftKey || e?.ctrlKey)}
           onContextMenu={(e) => {
             e.preventDefault();
@@ -2239,7 +2240,7 @@ const App: React.FC = () => {
         {/* Settings */}
         <button
           onClick={() => setView("settings")}
-          title={`Settings (${shortcuts.openSettings})`}
+          title={`Settings (${formatShortcutForDisplay(shortcuts.openSettings)})`}
           className="flex items-center justify-center rounded-full transition-colors"
           style={{
             width: "36px",

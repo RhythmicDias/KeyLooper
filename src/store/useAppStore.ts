@@ -118,6 +118,21 @@ export function formatShortcutFromEvent(e: KeyboardEvent | React.KeyboardEvent):
   return [...mods, keyName].join("+");
 }
 
+export const isMac =
+  typeof navigator !== "undefined" &&
+  /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent || navigator.platform);
+
+/** Format a shortcut string for display, converting to macOS symbols (⌘, ⌥, ⇧) on Mac. */
+export function formatShortcutForDisplay(binding: string | undefined): string {
+  if (!binding) return "";
+  if (!isMac) return binding;
+  return binding
+    .replace(/\bCtrl\b/g, "⌘")
+    .replace(/\bAlt\b/g, "⌥")
+    .replace(/\bShift\b/g, "⇧")
+    .replace(/\+/g, "");
+}
+
 /** Check if a KeyboardEvent matches a configured shortcut string. */
 export function matchesShortcut(
   e: KeyboardEvent | React.KeyboardEvent,

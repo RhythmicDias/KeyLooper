@@ -9,6 +9,7 @@ import {
   SHORTCUT_LABELS,
   DEFAULT_SHORTCUTS,
   formatShortcutFromEvent,
+  formatShortcutForDisplay,
   type ShortcutAction,
 } from "../store/useAppStore";
 import { testKey } from "../lib/geminiClient";
@@ -1314,7 +1315,7 @@ const SettingsView: React.FC = () => {
                       }}
                       title="Click to record a new shortcut"
                     >
-                      {isRecording ? "Press keys…" : currentBinding}
+                      {isRecording ? "Press keys…" : formatShortcutForDisplay(currentBinding)}
                     </button>
 
                     {isModified && (
