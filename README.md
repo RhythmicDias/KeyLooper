@@ -2,49 +2,52 @@
 
 <img src="app-icon.svg" width="120" align="right" alt="KeyLooper Icon" />
 
-**Unlimited Gemini API desktop client powered by secure, local sequential key rotation.**
+**Unlimited Gemini API desktop client powered by secure, local sequential key rotation and autonomous local file agents.**
 
-> A premium local-first LLM workspace built with Tauri + React, designed to maximize the utility of free Gemini API keys through intelligent round-robin rotation.
+> A local-first LLM workspace built with Tauri v2 + React, designed to maximize the utility of free Gemini API keys through intelligent round-robin rotation, multimodal file intelligence, and secure project-scoped agentic workflows.
 
 ---
 
 ## Key Features
 
 - **Sequential API Key Rotation** — Pool up to 20+ free-tier Gemini keys and rotate them automatically, so you effectively never hit a rate limit.
-- **Dual-Mode Operation** — Toggle between **Normal** (single active key) and **Unlimited** (full round-robin rotation) with an animated glowing switch.
-- **Custom Model Management** — Easily add, configure, and manage custom Gemini AI models directly from the Settings interface.
-- **Auto-Focus Chat Input** — Continuous focus management ensuring the prompt textarea automatically regains focus after the AI responds.
-- **Native Keyboard Shortcuts** — Full cross-platform keyboard shortcut support (Windows & macOS) for quick navigation, sending messages, and controlling sessions.
-- **HTML Artifact Generation & Auto-Download** — Automatically generate HTML files/artifacts with instant client-side download triggers.
-- **Google AI Studio Quick Link** — Dedicated `API` dock button to open Google AI Studio (`https://aistudio.google.com/`) directly in your browser for fast API key retrieval.
-- **Secure OS Keyring Integration** — API keys are stored securely using your operating system's native credential manager.
-- **Seamless Dark & Light Themes** — Modern color-scheme aware theme engine with full dark mode support, glassmorphism panels, and customized native dropdown menus.
-- **Audio Upload & Speech Transcription** — Upload audio files (MP3, WAV, M4A, OGG, AAC, WEBP audio) for automated AI audio transcription, translation, and analysis.
-- **Multi-Format Upload & Docx Processing** — Drag-and-drop support for PDFs, DOCX documents, audio files, images (PNG, JPEG, WEBP), plain text, and CSV files.
-- **Custom AI Skills & Agents** — Create and manage distinct personas with custom system prompts for specialized tasks (e.g., Code Review, Writing Assistance).
-- **Advanced Model Configuration** — Fine-tune AI behavior with adjustable thinking levels (Low, Medium, High), output lengths, safety settings, and grounding tools.
-- **Detailed Usage Statistics** — Track token consumption with comprehensive metrics broken down by day, model, and individual API key.
-- **Session Management** — Organize workflows into multiple concurrent chat sessions with auto-generated titles and local persistence.
-- **Local-First Privacy** — API keys and chat history live exclusively on your device; nothing is sent to third-party tracking servers.
+- **Tri-Mode Operation** — Switch seamlessly between:
+  - **Normal Mode**: Dedicated single active key with automatic temporary fallback on rate limits.
+  - **Unlimited Mode**: Continuous, persistent round-robin load balancing across all healthy keys.
+  - **Pro Mode**: Dedicated Pro API key with automatic Google Search grounding enabled.
+- **Autonomous Local File Agent with Safety Snapshots** — Connect any local project workspace folder with scoped tool calling (`list_directory`, `read_file`, `write_file`). KeyLooper automatically snapshots your project to a secure `__BACKUP_FOLDER` before any operation begins, with one-click snapshot restore.
+- **Google Gemini Web Companion** — Integrated Gemini Web launcher in the header and dock (`Alt + W`). Opens in a dedicated clean desktop window, with instant Shift-click / Right-click fallback to your default browser for authenticated Google Pro/Advanced sessions.
+- **Collapsible History Sidebar** — Dedicated slide-over history drawer (`Ctrl + H`) with real-time search filtering, session rename, and delete actions.
+- **Custom Keyboard Shortcuts Manager** — Fully customizable hotkeys for every major action (new chat, history, settings, voice, model switching) with an interactive shortcut recorder in Settings.
+- **Center-Bottom Floating Toasts** — Non-intrusive status, error, and safety alert toasts anchored at the lower center of the screen with auto-dismiss.
+- **Audio Intelligence & Multimodal File Uploads** — Drag-and-drop support for audio (MP3, WAV, M4A, OGG, AAC), documents (PDF, DOCX, TXT, CSV), and images (PNG, JPEG, WEBP) with automated Gemini File API uploads for large media.
+- **Document Generation (.docx & .html)** — Prompt Gemini to produce Word documents or interactive single-file HTML apps with automatic client-side download triggers.
+- **Custom Skills & System Personas** — Build and switch between tailored system prompts (Coding, Medical Analysis, Creative Writing, Translation).
+- **Google AI Studio Quick Link** — Dedicated `API` dock button to quickly open Google AI Studio (`https://aistudio.google.com/`) in your browser to grab fresh keys.
+- **Secure OS Keyring Storage** — Raw API keys never touch disk in plain text; all credentials are stored in your operating system's native secure keyring (Windows Credential Manager / macOS Keychain / Secret Service).
+- **Dark & Light Themes** — Contrast-tuned theme engine with smooth transitions, custom scrollbars, and customized dropdowns.
+- **Token Usage Analytics** — Track token consumption, latency, and request volume broken down by model, day, and individual API key.
 
 ---
 
 ## Keyboard Shortcuts (Fully Customizable in Settings)
 
-| Default Shortcut (Win) | Default Shortcut (macOS) | Action |
+| Default Shortcut (Win/Linux) | Default Shortcut (macOS) | Action |
 |---|---|---|
 | `Enter` / `Ctrl + Enter` | `Enter` / `Cmd + Enter` | Send message |
-| `Ctrl + N` | `Cmd + N` | New chat session |
+| `Ctrl + N` | `Cmd + N` | Create new chat session |
 | `Ctrl + H` | `Cmd + H` | Toggle History side panel |
 | `Ctrl + ,` | `Cmd + ,` | Open / close Settings |
 | `Alt + A` | `Option + A` | Open Agents & Skills |
-| `Ctrl + Shift + D` | `Cmd + Shift + D` | Toggle Dark / Light mode |
+| `Alt + W` | `Option + W` | Open Gemini Web (Window / Browser) |
+| `Ctrl + O` | `Cmd + O` | Select Local Project Workspace |
+| `Ctrl + Shift + D` | `Cmd + Shift + D` | Toggle Dark / Light theme |
 | `Ctrl + B` | `Cmd + B` | Show / hide bottom dock |
 | `Alt + M` | `Option + M` | Toggle voice dictation |
-| `Alt + G` | `Option + G` | Select active model |
+| `Alt + G` | `Option + G` | Open model picker |
 | `Ctrl + Shift + M` | `Cmd + Shift + M` | Cycle routing mode (Normal / Unlimited / Pro) |
 | `Ctrl + L` | `Cmd + L` | Clear active chat messages |
-| `Ctrl + /` | `Cmd + /` | Focus chat input |
+| `Ctrl + /` | `Cmd + /` | Focus chat input textarea |
 
 ---
 
@@ -53,49 +56,60 @@
 ### Prerequisites
 - [Node.js](https://nodejs.org/) v18+
 - [Rust](https://rustup.rs/) (stable)
-- WebView2 (Windows — pre-installed on Win 10/11)
+- WebView2 (Windows — pre-installed on Windows 10 & 11)
 
-### Steps
+### Setup
 
 ```bash
-# Step 1: Clone the repository
+# 1. Clone the repository
 git clone https://github.com/RhythmicDias/KeyLooper.git
 cd KeyLooper
 
-# Step 2: Install dependencies
+# 2. Install dependencies
 npm install
 
-# Step 3: Launch in development mode
+# 3. Launch in development mode
 npm run tauri dev
+
+# 4. Build desktop release package
+npm run tauri build
 ```
 
 ---
 
-## How It Works — Routing & Rotation
+## How It Works — Routing & Rotation Engine
 
-KeyLooper uses a rotation engine to distribute your API requests based on your selected mode:
+KeyLooper distributes Gemini API requests based on your active routing strategy:
 
-### 1. Normal Mode (Single Active Key)
-In Normal mode, the app uses the **first healthy key** in your list. 
-- If a rate limit is hit, that key goes on a 60-second cooldown, and the app temporarily falls back to the next key.
-- If you pause for 2-3 minutes (allowing the cooldown to expire), the app immediately routes back through the primary key on your next request.
-
-### 2. Unlimited Mode (Round-Robin)
-In Unlimited mode, the app uses strict **sequential round-robin** rotation to balance the load equally across all your accounts.
-- The app maintains a global index pointer that remembers exactly which key it used last. 
-- Even if you pause for several minutes or hours, the app remembers where it left off and routes your next message through the *next* key in the sequence, not starting over from the top.
-
-```text
-User sends message M1 → Key A (index 0) → index becomes 1
-User sends message M2 → Key B (index 1) → index becomes 2
-User sends message M3 → Key C (index 2) → index becomes 3
-User sends message M4 → Key A (index 0) → wraps back to 0
+```
+                      ┌──────────────────────┐
+                      │   User Prompt Turn   │
+                      └──────────┬───────────┘
+                                 │
+                 ┌───────────────┴───────────────┐
+                 ▼                               ▼
+       ┌───────────────────┐           ┌───────────────────┐
+       │   Normal Mode     │           │  Unlimited Mode   │
+       │ (Primary + Backup)│           │   (Round-Robin)   │
+       └─────────┬─────────┘           └─────────┬─────────┘
+                 │                               │
+                 │ Routes through Key [0]        │ Key [i] → Pointer increments
+                 │ (Falls back if 429)           │ (Rotates Key 0 → 1 → 2 → 0)
+                 └───────────────┬───────────────┘
+                                 │
+                                 ▼
+                     ┌───────────────────────┐
+                     │ Gemini API Endpoint   │
+                     └───────────────────────┘
 ```
 
-**Graceful Failure Handling (Both Modes):**
-1. Key returns `429 Rate Limited` → marked as rate-limited (60s cooldown) → skipped automatically
-2. Key returns `400/401/403 Invalid` → marked as invalid → skipped permanently until manually fixed
-3. Retries up to **3 times** across different keys before surfacing an error dialog
+1. **Normal Mode**: Prioritizes your primary key. If a `429 Rate Limit` occurs, the key is placed on a 60-second cooldown and KeyLooper temporarily routes through the next healthy key in the pool until the cooldown elapses.
+2. **Unlimited Mode**: Rotates sequentially across all healthy keys with persistent index tracking so subsequent requests continue round-robin distribution even after idle periods.
+3. **Pro Mode**: Routes directly to your high-throughput or billing-enabled Gemini API key and automatically enables Google Search Grounding for live web queries.
+4. **Failure Recovery**:
+   - `429 Too Many Requests`: Marks key as cooldown-locked (60s), rotates immediately to next key.
+   - `400 / 401 / 403 Invalid`: Flags key as invalid in local state and permanently excludes it from rotation.
+   - Automatically retries up to **3 consecutive times** before bubbling errors to the UI.
 
 ---
 
@@ -103,11 +117,11 @@ User sends message M4 → Key A (index 0) → wraps back to 0
 
 | Token | Hex | Role |
 |---|---|---|
-| Charcoal Gray | `#35302c` | App background (Dark) |
-| Terracotta Accent | `#b1624d` | Primary buttons, toggles, accents |
-| Warm Taupe | `#8c7d6e` | Secondary UI elements |
-| Muted Gray | `#d5cdc5` | Secondary text |
-| Off-White | `#f8f5f1` | Primary text, App background (Light) |
+| Charcoal Background | `#35302c` | Dark mode background |
+| Terracotta Accent | `#b1624d` | Primary buttons, active tabs, glowing toggles |
+| Warm Taupe | `#8c7d6e` | Secondary borders and mute indicators |
+| Muted Gray | `#d5cdc5` | Secondary text and meta captions |
+| Off-White | `#f8f5f1` | Light mode surface & dark mode primary text |
 
 ---
 
@@ -115,16 +129,29 @@ User sends message M4 → Key A (index 0) → wraps back to 0
 
 ```
 KeyLooper/
-├── src-tauri/         # Rust backend (Tauri windowing & OS keyring)
+├── src-tauri/
+│   ├── src/lib.rs          # Rust Tauri backend (OS keyring, workspace file agent, windowing)
+│   ├── tauri.conf.json     # Tauri app configuration & security settings
+│   └── Cargo.toml          # Rust crate dependencies
 ├── src/
-│   ├── components/    # UI components (Sidebar, ChatBubble, InputPanel, etc.)
-│   ├── lib/           # KeyRotator, Gemini client, file processor
-│   ├── store/         # Zustand global state management
-│   ├── styles/        # Global CSS + Tailwind theme & dark mode tokens
-│   └── __tests__/     # Vitest unit tests
-├── index.html
+│   ├── components/
+│   │   ├── Sidebar.tsx            # Collapsible chat history drawer & search
+│   │   ├── ChatBubble.tsx         # Message rendering, code copy, markdown, usage badges
+│   │   ├── SettingsView.tsx       # Key management, shortcuts editor, usage metrics, models
+│   │   ├── ModelConfigPanel.tsx   # Temperature, thinking budgets, safety thresholds
+│   │   └── SkillsView.tsx         # Custom AI personas & system prompt presets
+│   ├── lib/
+│   │   ├── KeyRotator.ts          # Round-robin key rotation and cooldown engine
+│   │   ├── geminiClient.ts        # Gemini API integration, tool definitions, file uploads
+│   │   └── fileProcessor.ts       # Audio, PDF, DOCX, and image parsing
+│   ├── store/
+│   │   └── useAppStore.ts         # Zustand store with persistent local storage
+│   ├── styles/                    # Global CSS, theme variables, and Tailwind config
+│   ├── __tests__/                 # Vitest test suite (KeyRotator & AgentTools)
+│   ├── App.tsx                    # Main layout, input composer, and action bar
+│   └── main.tsx                   # React root entry point
 ├── package.json
-└── FUTURE_UPDATE.md   # Architectural roadmap & future feature specs
+└── vite.config.ts
 ```
 
 ---
