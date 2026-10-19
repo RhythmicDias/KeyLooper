@@ -88,11 +88,23 @@ export class KeyRotator {
   }
 
   /**
-   * Return the active key. Also rotates sequentially through healthy keys
-   * to guarantee fair rate-limit (RPM/TPM) distribution across all keys.
+   * Return the active key for Normal mode (the top-most healthy active key in the list).
+   * Does not advance the round-robin pointer.
    */
   getActiveKey(): ApiKeyEntry | null {
-    return this.getNextKey();
+    const active = this.activeKeys;
+    if (active.length === 0) return null;
+
+    const key = active[0];
+    this.callCounter = Math.max(this.callCounter + 1, Date.now());
+    key.lastUsed = this.callCounter;
+
+    const poolEntry = this.keys.find((k) => k.id === key.id);
+    if (poolEntry) {
+      poolEntry.lastUsed = this.callCounter;
+    }
+
+    return poolEntry ?? key;
   }
 
   /**

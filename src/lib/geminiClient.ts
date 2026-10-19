@@ -344,7 +344,9 @@ export async function sendMessage(
     } else {
       entry = requiredKeyId
         ? opts.rotator.getKeyById(requiredKeyId)
-        : opts.rotator.getNextKey();
+        : opts.mode === "unlimited"
+        ? opts.rotator.getNextKey()
+        : opts.rotator.getActiveKey();
 
       if (requiredKeyId && !entry) {
         throw new Error(
