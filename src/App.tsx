@@ -210,6 +210,7 @@ const App: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [agentActivity, setAgentActivity] = useState<string | null>(null);
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
+  const [copiedWorkspacePath, setCopiedWorkspacePath] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEnd = useRef<HTMLDivElement>(null);
@@ -405,6 +406,26 @@ const App: React.FC = () => {
           },
         ],
       });
+    }
+  };
+
+  const handleCopyWorkspacePath = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (agentWorkspace) {
+      navigator.clipboard.writeText(agentWorkspace);
+      setCopiedWorkspacePath(true);
+      setTimeout(() => setCopiedWorkspacePath(false), 1500);
+    }
+  };
+
+  const handleOpenWorkspaceFolder = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!agentWorkspace) return;
+    try {
+      const { openPath } = await import("@tauri-apps/plugin-opener");
+      await openPath(agentWorkspace);
+    } catch (err) {
+      console.warn("Could not open workspace path via plugin-opener:", err);
     }
   };
 
@@ -1644,150 +1665,192 @@ const App: React.FC = () => {
                     onClick={() => setShowWorkspaceMenu(false)}
                   />
                   <div
-                    className="absolute left-0 mt-2 z-50 rounded-2xl p-4 flex flex-col gap-3 fade-in"
+                    className="absolute left-0 mt-2 z-50 rounded-[22px] p-5 flex flex-col fade-in"
                     style={{
-                      width: "350px",
+                      width: "480px",
+                      maxWidth: "calc(100vw - 32px)",
                       background: "var(--bg-color)",
                       border: "1px solid var(--border-color)",
-                      boxShadow: "0 12px 36px rgba(0, 0, 0, 0.28)",
+                      boxShadow: "0 16px 40px rgba(0, 0, 0, 0.16)",
                       backdropFilter: "blur(16px)",
                       fontFamily:
                         "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                     }}
                   >
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10.5px] font-semibold uppercase tracking-wider text-[var(--text-color-muted)]">
-                          Active Workspace
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-color)]">
+                        ACTIVE WORKSPACE
+                      </span>
+                      <div className="flex items-center gap-1.5 text-xs text-[var(--text-color-muted)]">
+                        <span>
+                          {agentBackupPath ? "Backup snapshot created" : "No backup snapshot"}
                         </span>
-                        {agentBackupPath ? (
-                          <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                            <Icon name="verified_user" size={13} />
-                            <span>Protected</span>
-                          </span>
-                        ) : (
-                          <span className="text-[10.5px] font-medium text-[var(--text-color-muted)]">
-                            No backup snapshot
-                          </span>
-                        )}
-                      </div>
-                      <div
-                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-[var(--border-color)] bg-[var(--input-bg)] text-xs font-mono"
-                        title={agentWorkspace}
-                      >
                         <Icon
-                          name="folder"
-                          size={15}
-                          style={{ color: "var(--primary)", flexShrink: 0 }}
+                          name={agentBackupPath ? "cloud_done" : "cloud"}
+                          size={16}
+                          thin
+                          className="opacity-75"
                         />
-                        <span className="truncate select-all text-[var(--text-color)]">
-                          {agentWorkspace}
-                        </span>
                       </div>
-                      {agentBackupPath && (
-                        <div className="mt-2">
-                          <span className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--text-color-muted)] mb-1">
-                            Backup Snapshot
-                          </span>
-                          <div
-                            className="truncate select-all px-2.5 py-1.5 rounded-lg border border-[var(--border-color)] bg-[var(--input-bg)] text-[10.5px] font-mono text-[var(--text-color-muted)]"
-                            title={agentBackupPath}
-                          >
-                            {agentBackupPath}
-                          </div>
-                        </div>
-                      )}
                     </div>
 
-                    <div className="h-px bg-[var(--border-color)] opacity-60" />
-
-                    <div className="flex flex-col gap-1">
-                      <button
-                        onClick={() => {
-                          setShowWorkspaceMenu(false);
-                          handleRefreshBackup();
-                        }}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium hover:bg-[var(--input-bg)] transition-colors cursor-pointer text-left text-[var(--text-color)] group"
+                    <div
+                      className="flex items-center gap-2.5 px-3.5 py-2 rounded-full border border-[var(--border-color)] mt-3 mb-2"
+                      style={{
+                        background: "var(--input-bg)",
+                      }}
+                    >
+                      <Icon
+                        name="folder"
+                        filled
+                        size={18}
+                        style={{ color: "#d97736", flexShrink: 0 }}
+                      />
+                      <span
+                        className="truncate select-all text-[13px] font-mono flex-1 text-[var(--text-color)] font-medium"
+                        title={agentWorkspace}
                       >
-                        <Icon
-                          name="refresh"
-                          size={16}
-                          className="text-[var(--text-color-muted)] group-hover:text-[var(--primary)] transition-colors"
-                        />
-                        <div className="flex flex-col min-w-0">
-                          <span className="leading-tight">
-                            {agentBackupPath ? "Refresh Safety Backup" : "Create Safety Backup"}
-                          </span>
-                          <span className="text-[10px] text-[var(--text-color-muted)] font-normal leading-tight mt-0.5">
-                            {agentBackupPath
-                              ? "Update snapshot with current workspace files"
-                              : "Take a safety snapshot before editing"}
-                          </span>
-                        </div>
-                      </button>
-
-                      {agentBackupPath && (
+                        {agentWorkspace}
+                      </span>
+                      <div className="flex items-center gap-1 shrink-0 text-[var(--text-color-muted)]">
                         <button
+                          type="button"
+                          onClick={handleCopyWorkspacePath}
+                          title={copiedWorkspacePath ? "Copied!" : "Copy path"}
+                          className="p-1 rounded-full hover:text-[var(--text-color)] hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center"
+                        >
+                          <Icon
+                            name={copiedWorkspacePath ? "check" : "content_copy"}
+                            size={16}
+                            thin
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleOpenWorkspaceFolder}
+                          title="Open folder in File Manager"
+                          className="p-1 rounded-full hover:text-[var(--text-color)] hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center"
+                        >
+                          <Icon name="folder_open" size={16} thin />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="h-px bg-[var(--border-color)] opacity-70 my-0.5" />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowWorkspaceMenu(false);
+                        handleRefreshBackup();
+                      }}
+                      className="w-full flex items-center gap-4 py-3.5 px-2 rounded-xl text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                    >
+                      <Icon
+                        name="refresh"
+                        size={24}
+                        thin
+                        className="text-[var(--text-color)] shrink-0"
+                      />
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[14px] font-semibold text-[var(--text-color)] leading-snug">
+                          {agentBackupPath ? "Refresh Safety Backup" : "Create Safety Backup"}
+                        </span>
+                        <span className="text-[12px] text-[var(--text-color-muted)] leading-snug mt-0.5">
+                          {agentBackupPath
+                            ? "Update snapshot with current workspace files"
+                            : "Take a safety snapshot before editing"}
+                        </span>
+                      </div>
+                    </button>
+
+                    {agentBackupPath && (
+                      <>
+                        <div className="h-px bg-[var(--border-color)] opacity-70 my-0.5" />
+                        <button
+                          type="button"
                           onClick={() => {
                             setShowWorkspaceMenu(false);
                             handleRestoreBackup();
                           }}
-                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium hover:bg-rose-500/10 transition-colors cursor-pointer text-left text-rose-600 dark:text-rose-400 group"
+                          className="w-full flex items-center gap-4 py-3.5 px-2 rounded-xl text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors cursor-pointer group"
                         >
                           <Icon
                             name="history"
-                            size={16}
-                            className="group-hover:rotate-[-45deg] transition-transform"
+                            size={24}
+                            thin
+                            className="text-[var(--text-color)] shrink-0 group-hover:rotate-[-45deg] transition-transform"
                           />
                           <div className="flex flex-col min-w-0">
-                            <span className="leading-tight font-semibold">
+                            <span className="text-[14px] font-semibold text-[var(--text-color)] leading-snug">
                               Restore Original Project
                             </span>
-                            <span className="text-[10px] opacity-80 font-normal leading-tight mt-0.5">
-                              Revert files back to the safety snapshot
+                            <span className="text-[12px] text-[var(--text-color-muted)] leading-snug mt-0.5">
+                              Revert workspace back to safety snapshot
                             </span>
                           </div>
                         </button>
-                      )}
+                      </>
+                    )}
 
-                      <button
-                        onClick={() => {
-                          setShowWorkspaceMenu(false);
-                          handleSelectWorkspace();
-                        }}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium hover:bg-[var(--input-bg)] transition-colors cursor-pointer text-left text-[var(--text-color)] group"
-                      >
-                        <Icon
-                          name="drive_file_move"
-                          size={16}
-                          className="text-[var(--text-color-muted)] group-hover:text-[var(--primary)] transition-colors"
-                        />
-                        <div className="flex flex-col min-w-0">
-                          <span className="leading-tight">Switch Folder...</span>
-                          <span className="text-[10px] text-[var(--text-color-muted)] font-normal leading-tight mt-0.5">
-                            Choose a different project folder
-                          </span>
-                        </div>
-                      </button>
+                    <div className="h-px bg-[var(--border-color)] opacity-70 my-0.5" />
 
-                      <div className="h-px bg-[var(--border-color)] my-1 opacity-60" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowWorkspaceMenu(false);
+                        handleSelectWorkspace();
+                      }}
+                      className="w-full flex items-center gap-4 py-3.5 px-2 rounded-xl text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                    >
+                      <Icon
+                        name="drive_file_move"
+                        size={24}
+                        thin
+                        className="text-[var(--text-color)] shrink-0"
+                      />
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[14px] font-semibold text-[var(--text-color)] leading-snug">
+                          Switch Folder...
+                        </span>
+                        <span className="text-[12px] text-[var(--text-color-muted)] leading-snug mt-0.5">
+                          Choose a different project folder
+                        </span>
+                      </div>
+                    </button>
 
-                      <button
-                        onClick={() => {
-                          setShowWorkspaceMenu(false);
-                          handleDisconnectWorkspace();
-                        }}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 text-[var(--text-color-muted)] transition-colors cursor-pointer text-left group"
-                      >
-                        <Icon name="link_off" size={16} />
-                        <div className="flex flex-col min-w-0">
-                          <span className="leading-tight">Disconnect Workspace</span>
-                          <span className="text-[10px] opacity-80 font-normal leading-tight mt-0.5">
-                            Close local folder access for AI
-                          </span>
-                        </div>
-                      </button>
-                    </div>
+                    <div className="h-px bg-[var(--border-color)] opacity-70 my-0.5" />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowWorkspaceMenu(false);
+                        handleDisconnectWorkspace();
+                      }}
+                      className="w-full flex items-center gap-4 py-3.5 px-2 rounded-xl text-left hover:bg-[var(--primary)]/10 transition-colors cursor-pointer group"
+                    >
+                      <Icon
+                        name="link_off"
+                        size={24}
+                        thin
+                        style={{ color: "var(--primary)" }}
+                        className="shrink-0"
+                      />
+                      <div className="flex flex-col min-w-0">
+                        <span
+                          className="text-[14px] font-semibold leading-snug"
+                          style={{ color: "var(--primary)" }}
+                        >
+                          Disconnect Workspace
+                        </span>
+                        <span
+                          className="text-[12px] leading-snug mt-0.5"
+                          style={{ color: "var(--primary)", opacity: 0.85 }}
+                        >
+                          Close local folder access for AI
+                        </span>
+                      </div>
+                    </button>
                   </div>
                 </>
               )}
