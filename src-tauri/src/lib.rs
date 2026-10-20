@@ -506,6 +506,22 @@ fn show_main_window(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn set_global_hotkey(app: tauri::AppHandle, hotkey: String) -> Result<(), String> {
+    use std::str::FromStr;
+    use tauri_plugin_global_shortcut::GlobalShortcutExt;
+
+    let normalized = hotkey.replace("Ctrl", "CommandOrControl");
+    let shortcut = tauri_plugin_global_shortcut::Shortcut::from_str(&normalized)
+        .map_err(|e| format!("Invalid shortcut format: {:?}", e))?;
+
+    let gs = app.global_shortcut();
+    let _ = gs.unregister_all();
+    gs.register(shortcut)
+        .map_err(|e| format!("Failed to register global hotkey: {:?}", e))?;
+    Ok(())
+}
+
 pub fn run() {
     #[cfg(windows)]
     {
@@ -586,6 +602,11 @@ pub fn run() {
                     .tooltip("KeyLooper")
                     .show_menu_on_left_click(false)
                     .build(app)?;
+
+                use tauri_plugin_global_shortcut::GlobalShortcutExt;
+                if let Ok(default_shortcut) = "CommandOrControl+Shift+K".parse::<tauri_plugin_global_shortcut::Shortcut>() {
+                    let _ = app.global_shortcut().register(default_shortcut);
+                }
             }
             Ok(())
         })
@@ -594,7 +615,19 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, _shortcut, event| {
+                    if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.unminimize();
+                            let _ = window.set_focus();
+                        }
+                    }
+                })
+                .build(),
+        )
         .invoke_handler(tauri::generate_handler![
             save_api_key,
             load_api_key,
@@ -611,7 +644,8 @@ pub fn run() {
             save_custom_skills,
             load_custom_skills,
             hide_to_tray,
-            show_main_window
+            show_main_window,
+            set_global_hotkey
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
