@@ -1665,7 +1665,7 @@ const App: React.FC = () => {
                     onClick={() => setShowWorkspaceMenu(false)}
                   />
                   <div
-                    className="absolute left-0 mt-2 z-50 rounded-[22px] p-5 flex flex-col fade-in"
+                    className="absolute left-0 mt-2 z-50 rounded-[22px] px-6 pt-6 pb-5 flex flex-col fade-in"
                     style={{
                       width: "480px",
                       maxWidth: "calc(100vw - 32px)",
@@ -1677,7 +1677,7 @@ const App: React.FC = () => {
                         "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                     }}
                   >
-                    <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center justify-between px-2 pt-0.5 mb-3">
                       <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-color)]">
                         ACTIVE WORKSPACE
                       </span>
@@ -1695,7 +1695,7 @@ const App: React.FC = () => {
                     </div>
 
                     <div
-                      className="flex items-center gap-2.5 px-3.5 py-2 rounded-full border border-[var(--border-color)] mt-3 mb-2"
+                      className="flex items-center gap-2.5 px-4 py-2.5 rounded-full border border-[var(--border-color)] mb-3"
                       style={{
                         background: "var(--input-bg)",
                       }}
@@ -1744,7 +1744,7 @@ const App: React.FC = () => {
                         setShowWorkspaceMenu(false);
                         handleRefreshBackup();
                       }}
-                      className="w-full flex items-center gap-4 py-3.5 px-2 rounded-xl text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                      className="w-full flex items-center gap-4 py-3.5 px-2.5 rounded-xl text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors cursor-pointer group"
                     >
                       <Icon
                         name="refresh"
@@ -1773,7 +1773,7 @@ const App: React.FC = () => {
                             setShowWorkspaceMenu(false);
                             handleRestoreBackup();
                           }}
-                          className="w-full flex items-center gap-4 py-3.5 px-2 rounded-xl text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                          className="w-full flex items-center gap-4 py-3.5 px-2.5 rounded-xl text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors cursor-pointer group"
                         >
                           <Icon
                             name="history"
@@ -1801,7 +1801,7 @@ const App: React.FC = () => {
                         setShowWorkspaceMenu(false);
                         handleSelectWorkspace();
                       }}
-                      className="w-full flex items-center gap-4 py-3.5 px-2 rounded-xl text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                      className="w-full flex items-center gap-4 py-3.5 px-2.5 rounded-xl text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors cursor-pointer group"
                     >
                       <Icon
                         name="drive_file_move"
@@ -1827,7 +1827,7 @@ const App: React.FC = () => {
                         setShowWorkspaceMenu(false);
                         handleDisconnectWorkspace();
                       }}
-                      className="w-full flex items-center gap-4 py-3.5 px-2 rounded-xl text-left hover:bg-[var(--primary)]/10 transition-colors cursor-pointer group"
+                      className="w-full flex items-center gap-4 py-3.5 px-2.5 rounded-xl text-left hover:bg-[var(--primary)]/10 transition-colors cursor-pointer group"
                     >
                       <Icon
                         name="link_off"
