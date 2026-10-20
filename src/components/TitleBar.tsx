@@ -116,8 +116,18 @@ const TitleBar: React.FC = () => {
             e.currentTarget.style.color = "var(--text-color-muted)";
           }}
           onClick={async () => {
-            const win = getCurrentWindow();
-            await win.hide();
+            try {
+              const { invoke } = await import("@tauri-apps/api/core");
+              await invoke("hide_to_tray");
+            } catch {
+              try {
+                const win = getCurrentWindow();
+                await win.hide();
+              } catch {
+                const win = getCurrentWindow();
+                await win.close();
+              }
+            }
           }}
         >
           <span className="material-symbols-outlined" style={{ fontSize: "18px", pointerEvents: "none" }}>

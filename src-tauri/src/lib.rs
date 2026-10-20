@@ -490,6 +490,11 @@ fn load_custom_skills(app: tauri::AppHandle) -> Result<String, String> {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+#[tauri::command]
+fn hide_to_tray(window: tauri::WebviewWindow) -> Result<(), String> {
+    window.hide().map_err(|e| e.to_string())
+}
+
 pub fn run() {
     #[cfg(windows)]
     {
@@ -592,7 +597,8 @@ pub fn run() {
             open_gemini_web_window,
             upload_file_to_gemini,
             save_custom_skills,
-            load_custom_skills
+            load_custom_skills,
+            hide_to_tray
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
