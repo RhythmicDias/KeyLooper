@@ -2427,7 +2427,7 @@ const App: React.FC = () => {
           cursor: "pointer",
         }}
       >
-        <Icon name="chevron_left" size={26} />
+        <Icon name="keyboard_arrow_up" size={26} />
       </button>
 
       {/* ════════════════════════════════════════════════
