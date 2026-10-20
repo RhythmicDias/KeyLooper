@@ -2127,9 +2127,9 @@ const App: React.FC = () => {
                 className="absolute inset-0 overflow-y-auto pt-6"
                 style={{
                   paddingLeft: isSidebarOpen ? "32px" : "24px",
-                  paddingRight: "24px",
-                  paddingBottom: isDockVisible ? "220px" : "140px",
-                  transition: "padding-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                  paddingRight: isDockVisible ? "80px" : "24px",
+                  paddingBottom: "140px",
+                  transition: "padding-left 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding-right 0.3s ease",
                 }}
               >
                 <div
@@ -2258,11 +2258,12 @@ const App: React.FC = () => {
                 className="absolute bottom-0 left-0 right-0 pointer-events-none flex flex-col justify-end"
                 style={{
                   paddingLeft: isSidebarOpen ? "32px" : "24px",
-                  paddingRight: "24px",
-                  paddingBottom: isDockVisible ? "78px" : "20px",
+                  paddingRight: isDockVisible ? "80px" : "24px",
+                  paddingBottom: "20px",
                   paddingTop: "16px",
                   zIndex: 10,
-                  transition: "padding-bottom 0.35s ease, padding-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                  transition:
+                    "padding-right 0.3s ease, padding-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
                 }}
               >
                 <div className="pointer-events-auto">
@@ -2285,11 +2286,7 @@ const App: React.FC = () => {
             right: 0,
             bottom:
               currentView === "chat" && hasChat
-                ? isDockVisible
-                  ? "168px"
-                  : "110px"
-                : isDockVisible
-                ? "88px"
+                ? "105px"
                 : "28px",
             display: "flex",
             justifyContent: "center",
@@ -2409,46 +2406,48 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Expand Dock Button */}
+      {/* ════════════════════════════════════════════════
+          EXPAND DOCK BUTTON (RIGHT EDGE)
+      ════════════════════════════════════════════════ */}
       <button
         onClick={() => setIsDockVisible(true)}
         title={`Show Dock (${formatShortcutForDisplay(shortcuts.toggleDock)})`}
-        className="fixed z-50 flex items-center justify-center rounded-full shadow-lg transition-all duration-500"
+        className="fixed z-50 flex items-center justify-center rounded-full shadow-lg transition-all duration-300"
         style={{
-          bottom: "16px",
-          left: isDockVisible ? "-60px" : "20px",
+          bottom: "24px",
+          right: isDockVisible ? "-60px" : "16px",
           width: "44px",
           height: "44px",
           background: "var(--input-bg)",
           border: "1px solid var(--border-color)",
           color: "var(--text-color)",
           opacity: isDockVisible ? 0 : 1,
-          backdropFilter: "blur(8px)",
+          pointerEvents: isDockVisible ? "none" : "auto",
+          backdropFilter: "blur(12px)",
           cursor: "pointer",
         }}
       >
-        <Icon name="chevron_right" size={26} />
+        <Icon name="chevron_left" size={26} />
       </button>
 
       {/* ════════════════════════════════════════════════
-          FLOATING BOTTOM DOCK
+          FLOATING VERTICAL RIGHT DOCK
       ════════════════════════════════════════════════ */}
       <nav
-        className="fixed flex items-center floating-dock rounded-2xl shadow-2xl z-40 transition-all duration-500"
+        className="fixed flex flex-col items-center floating-dock rounded-2xl shadow-2xl z-40 transition-all duration-300"
         style={{
-          bottom: "16px",
-          left: isSidebarOpen ? "calc(50% + 130px)" : "50%",
-          transform: isDockVisible ? "translateX(-50%)" : "translateX(-150vw)",
+          bottom: "24px",
+          right: isDockVisible ? "16px" : "-80px",
           opacity: isDockVisible ? 1 : 0,
           pointerEvents: isDockVisible ? "auto" : "none",
-          padding: "5px 10px",
-          gap: "4px",
+          padding: "8px 6px",
+          gap: "5px",
         }}
       >
         <button
           onClick={() => setIsDockVisible(false)}
           title={`Hide Dock (${formatShortcutForDisplay(shortcuts.toggleDock)})`}
-          className="absolute flex items-center justify-center rounded-full shadow transition-colors"
+          className="absolute flex items-center justify-center rounded-full shadow transition-colors cursor-pointer"
           style={{
             top: "-8px",
             right: "-8px",
@@ -2457,7 +2456,6 @@ const App: React.FC = () => {
             background: "var(--bg-color)",
             border: "1px solid var(--border-color)",
             color: "var(--text-color-muted)",
-            cursor: "pointer",
             zIndex: 10,
           }}
         >
@@ -2504,10 +2502,10 @@ const App: React.FC = () => {
 
         <div
           style={{
-            width: "1px",
-            height: "20px",
+            width: "24px",
+            height: "1px",
             background: "var(--border-color)",
-            margin: "0 6px",
+            margin: "4px 0",
           }}
         />
 
