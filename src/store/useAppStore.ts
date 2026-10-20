@@ -370,8 +370,10 @@ interface AppState {
   // Autonomous Local File Agent
   agentWorkspace: string | null;
   agentBackupPath: string | null;
+  pendingWorkspacePrompt: string | null;
   setAgentWorkspace: (path: string | null) => void;
   setAgentBackupPath: (path: string | null) => void;
+  setPendingWorkspacePrompt: (path: string | null) => void;
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -729,8 +731,10 @@ export const useAppStore = create<AppState>()(
       // ── Autonomous Local File Agent ───────────────────────────────────────
       agentWorkspace: null,
       agentBackupPath: null,
+      pendingWorkspacePrompt: null,
       setAgentWorkspace: (agentWorkspace) => set({ agentWorkspace }),
       setAgentBackupPath: (agentBackupPath) => set({ agentBackupPath }),
+      setPendingWorkspacePrompt: (pendingWorkspacePrompt) => set({ pendingWorkspacePrompt }),
     }),
     {
       name: "keylooper-storage",

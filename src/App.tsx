@@ -177,6 +177,9 @@ const App: React.FC = () => {
   const setSessionWorkspace = useAppStore((s) => s.setSessionWorkspace);
   const agentBackupPath = useAppStore((s) => s.agentBackupPath);
   const setAgentBackupPath = useAppStore((s) => s.setAgentBackupPath);
+  const pendingWorkspacePrompt = useAppStore((s) => s.pendingWorkspacePrompt);
+  const setPendingWorkspacePrompt = useAppStore((s) => s.setPendingWorkspacePrompt);
+  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const autoCheckUpdates = useAppStore((s) => s.autoCheckUpdates);
   const updateAvailable = useAppStore((s) => s.updateAvailable);
   const setUpdateAvailable = useAppStore((s) => s.setUpdateAvailable);
@@ -259,42 +262,87 @@ const App: React.FC = () => {
       });
       if (!selected || typeof selected !== "string") return;
 
-      setAgentWorkspace(selected);
+      setPendingWorkspacePrompt(selected);
       setLocalError(null);
-
-      // By default after permission is granted, KeyLooper first creates a backup
-      // of the original folder with __BACKUP_FOLDER appended before working inside it
-      try {
-        const backupPath = await invoke<string>("agent_create_backup", {
-          workspacePath: selected,
-        });
-        setAgentBackupPath(backupPath);
-
-        let curSessionId = activeSessionId;
-        if (!curSessionId) {
-          curSessionId = createSession();
-        }
-        setSessionWorkspace(curSessionId, selected);
-
-        appendMessage(curSessionId, {
-          role: "model",
-          parts: [
-            {
-              text: `🛡️ **Workspace Connected & Safety Backup Created**\n\n• **Active Workspace:** \`${selected}\`\n• **Safety Backup:** \`${backupPath}\`\n\nKeyLooper has secured your project with a complete \`__BACKUP_FOLDER\` snapshot before any operations begin. The autonomous agent is now scoped to read and edit files in this folder. You can restore your project snapshot at any time.`,
-            },
-          ],
-        });
-      } catch (backupErr: any) {
-        console.error("Backup creation error:", backupErr);
-        setLocalError(
-          `Workspace connected, but backup creation failed: ${
-            backupErr?.message || backupErr
-          }`
-        );
-      }
     } catch (err: any) {
       console.error("Directory selection error:", err);
       setLocalError(`Could not open directory picker: ${err?.message || err}`);
+    }
+  };
+
+  const handleAllowBackup = async () => {
+    if (!pendingWorkspacePrompt) return;
+    const selected = pendingWorkspacePrompt;
+    setIsCreatingBackup(true);
+    setLocalError(null);
+    try {
+      const backupPath = await invoke<string>("agent_create_backup", {
+        workspacePath: selected,
+      });
+      setAgentWorkspace(selected);
+      setAgentBackupPath(backupPath);
+      setPendingWorkspacePrompt(null);
+
+      let curSessionId = activeSessionId;
+      if (!curSessionId) {
+        curSessionId = createSession();
+      }
+      setSessionWorkspace(curSessionId, selected);
+
+      appendMessage(curSessionId, {
+        role: "model",
+        parts: [
+          {
+            text: `🛡️ **Workspace Connected & Safety Backup Created**\n\n• **Active Workspace:** \`${selected}\`\n• **Safety Backup:** \`${backupPath}\`\n\nKeyLooper has secured your project with a complete \`__BACKUP_FOLDER\` snapshot before any operations begin. The autonomous agent is now scoped to read and edit files in this folder.`,
+          },
+        ],
+      });
+    } catch (backupErr: any) {
+      console.error("Backup creation error:", backupErr);
+      setLocalError(
+        `Workspace connected, but backup creation failed: ${
+          backupErr?.message || backupErr
+        }`
+      );
+    } finally {
+      setIsCreatingBackup(false);
+    }
+  };
+
+  const handleProceedWithoutBackup = () => {
+    if (!pendingWorkspacePrompt) return;
+    const selected = pendingWorkspacePrompt;
+    setAgentWorkspace(selected);
+    setAgentBackupPath(null);
+    setPendingWorkspacePrompt(null);
+
+    let curSessionId = activeSessionId;
+    if (!curSessionId) {
+      curSessionId = createSession();
+    }
+    setSessionWorkspace(curSessionId, selected);
+
+    appendMessage(curSessionId, {
+      role: "model",
+      parts: [
+        {
+          text: `📁 **Workspace Connected (No Backup)**\n\n• **Active Workspace:** \`${selected}\`\n\nKeyLooper is ready to proceed with your workspace task inside this folder without creating a safety backup.`,
+        },
+      ],
+    });
+  };
+
+  const handleCancelWorkspacePrompt = () => {
+    setPendingWorkspacePrompt(null);
+    if (activeSessionId) {
+      appendMessage(activeSessionId, {
+        role: "model",
+        parts: [
+          {
+            text: `🚫 **Workspace Task Cancelled**\n\nWorkspace connection was cancelled. KeyLooper will not access or modify files in the selected folder.`,
+          },
+        ],
+      });
     }
   };
 
@@ -2340,6 +2388,107 @@ const App: React.FC = () => {
           )}
         </button>
       </nav>
+
+      {/* ════════════════════════════════════════════════
+          WORKSPACE BACKUP CONFIRMATION MODAL
+      ════════════════════════════════════════════════ */}
+      {pendingWorkspacePrompt && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 fade-in">
+          <div
+            className="glass-modal rounded-2xl p-5 max-w-md w-full shadow-2xl flex flex-col gap-4 border"
+            style={{
+              background: "var(--modal-bg)",
+              borderColor: "var(--modal-border)",
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: "rgba(177,98,77,0.12)",
+                  color: "var(--primary)",
+                }}
+              >
+                <Icon name="folder_open" size={22} />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold text-[var(--primary)] uppercase tracking-wider">
+                  Workspace Confirmation
+                </div>
+                <div
+                  className="text-xs font-mono text-[var(--text-color)] font-medium truncate"
+                  title={pendingWorkspacePrompt}
+                >
+                  {pendingWorkspacePrompt}
+                </div>
+              </div>
+            </div>
+
+            <p className="text-sm text-[var(--text-color)] leading-relaxed">
+              I'm working inside your selected folder. Do you want me to create a backup before I proceed?
+            </p>
+
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-[var(--border-color)]">
+              <button
+                onClick={handleCancelWorkspacePrompt}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                style={{
+                  color: "var(--text-color-muted)",
+                  background: "transparent",
+                  border: "1px solid var(--border-color)",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "var(--input-bg)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "transparent")
+                }
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleProceedWithoutBackup}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                style={{
+                  color: "var(--text-color)",
+                  background: "var(--input-bg)",
+                  border: "1px solid var(--border-color)",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "var(--bg-color)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "var(--input-bg)")
+                }
+              >
+                Proceed Without Backup
+              </button>
+              <button
+                onClick={handleAllowBackup}
+                disabled={isCreatingBackup}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity cursor-pointer shadow-sm flex items-center gap-1.5"
+                style={{
+                  background: "var(--primary)",
+                  border: "none",
+                  opacity: isCreatingBackup ? 0.7 : 1,
+                }}
+              >
+                {isCreatingBackup ? (
+                  <>
+                    <Icon name="progress_activity" size={14} className="animate-spin" />
+                    <span>Backing up...</span>
+                  </>
+                ) : (
+                  <>
+                    <Icon name="security" size={14} />
+                    <span>Allow</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
