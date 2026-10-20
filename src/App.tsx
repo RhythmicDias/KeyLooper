@@ -2112,11 +2112,10 @@ const App: React.FC = () => {
       ════════════════════════════════════════════════ */}
       {localError && (
         <div
-          className="fade-in"
           style={{
             position: "fixed",
-            left: "50%",
-            transform: "translateX(-50%)",
+            left: 0,
+            right: 0,
             bottom:
               currentView === "chat" && hasChat
                 ? isDockVisible
@@ -2125,63 +2124,76 @@ const App: React.FC = () => {
                 : isDockVisible
                 ? "88px"
                 : "28px",
-            zIndex: 60,
-            maxWidth: "min(620px, calc(100vw - 32px))",
-            width: "fit-content",
-            boxSizing: "border-box",
-            padding: "11px 16px",
-            borderRadius: "14px",
             display: "flex",
+            justifyContent: "center",
             alignItems: "center",
-            gap: "10px",
-            background: "rgba(186, 26, 26, 0.95)",
-            color: "#ffffff",
-            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
-            backdropFilter: "blur(10px)",
-            WebkitBackdropFilter: "blur(10px)",
-            fontFamily:
-              "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            zIndex: 60,
+            pointerEvents: "none",
+            paddingLeft: "16px",
+            paddingRight: "16px",
           }}
         >
-          <Icon name="error" size={19} style={{ color: "#fff", flexShrink: 0 }} />
-          <p
+          <div
+            className="fade-in"
             style={{
-              flex: 1,
-              fontSize: "13.5px",
-              lineHeight: 1.4,
-              margin: 0,
-              color: "#fff",
-              wordBreak: "break-word",
-            }}
-          >
-            {localError}
-          </p>
-          <button
-            onClick={() => setLocalError(null)}
-            title="Dismiss error"
-            className="cursor-pointer transition-colors"
-            style={{
-              background: "rgba(255, 255, 255, 0.18)",
-              border: "none",
-              borderRadius: "6px",
-              width: "24px",
-              height: "24px",
+              pointerEvents: "auto",
+              maxWidth: "620px",
+              width: "fit-content",
+              boxSizing: "border-box",
+              padding: "11px 16px",
+              borderRadius: "14px",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-              flexShrink: 0,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(255, 255, 255, 0.18)";
+              gap: "10px",
+              background: "rgba(186, 26, 26, 0.95)",
+              color: "#ffffff",
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              fontFamily:
+                "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
             }}
           >
-            <Icon name="close" size={14} />
-          </button>
+            <Icon name="error" size={19} style={{ color: "#fff", flexShrink: 0 }} />
+            <p
+              style={{
+                flex: 1,
+                fontSize: "13.5px",
+                lineHeight: 1.4,
+                margin: 0,
+                color: "#fff",
+                wordBreak: "break-word",
+              }}
+            >
+              {localError}
+            </p>
+            <button
+              onClick={() => setLocalError(null)}
+              title="Dismiss error"
+              className="cursor-pointer transition-colors"
+              style={{
+                background: "rgba(255, 255, 255, 0.18)",
+                border: "none",
+                borderRadius: "6px",
+                width: "24px",
+                height: "24px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.18)";
+              }}
+            >
+              <Icon name="close" size={14} />
+            </button>
+          </div>
         </div>
       )}
 
