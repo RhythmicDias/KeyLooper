@@ -2115,7 +2115,7 @@ const App: React.FC = () => {
           className="fade-in"
           style={{
             position: "fixed",
-            left: isSidebarOpen ? "calc(50% + 130px)" : "50%",
+            left: "50%",
             transform: "translateX(-50%)",
             bottom:
               currentView === "chat" && hasChat
@@ -2126,29 +2126,33 @@ const App: React.FC = () => {
                 ? "88px"
                 : "28px",
             zIndex: 60,
-            maxWidth: "620px",
-            width: "calc(100% - 40px)",
+            maxWidth: "min(620px, calc(100vw - 32px))",
+            width: "fit-content",
+            boxSizing: "border-box",
             padding: "11px 16px",
             borderRadius: "14px",
             display: "flex",
             alignItems: "center",
             gap: "10px",
-            background: "rgba(186, 26, 26, 0.94)",
+            background: "rgba(186, 26, 26, 0.95)",
             color: "#ffffff",
-            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.25)",
-            border: "1px solid rgba(255, 255, 255, 0.18)",
+            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
             backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            fontFamily:
+              "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
           }}
         >
           <Icon name="error" size={19} style={{ color: "#fff", flexShrink: 0 }} />
           <p
             style={{
               flex: 1,
-              fontSize: "14px",
-              lineHeight: 1.35,
+              fontSize: "13.5px",
+              lineHeight: 1.4,
               margin: 0,
               color: "#fff",
-              fontFamily: "'Crimson Pro', serif",
+              wordBreak: "break-word",
             }}
           >
             {localError}
@@ -2156,8 +2160,9 @@ const App: React.FC = () => {
           <button
             onClick={() => setLocalError(null)}
             title="Dismiss error"
+            className="cursor-pointer transition-colors"
             style={{
-              background: "rgba(255,255,255,0.15)",
+              background: "rgba(255, 255, 255, 0.18)",
               border: "none",
               borderRadius: "6px",
               width: "24px",
@@ -2166,8 +2171,13 @@ const App: React.FC = () => {
               alignItems: "center",
               justifyContent: "center",
               color: "#fff",
-              cursor: "pointer",
               flexShrink: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.18)";
             }}
           >
             <Icon name="close" size={14} />
