@@ -117,7 +117,7 @@ const TitleBar: React.FC = () => {
           }}
           onClick={async () => {
             const win = getCurrentWindow();
-            await win.close();
+            await win.hide();
           }}
         >
           <span className="material-symbols-outlined" style={{ fontSize: "18px", pointerEvents: "none" }}>

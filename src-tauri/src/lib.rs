@@ -514,24 +514,47 @@ pub fn run() {
                 use tauri::Emitter;
                 use tauri::Manager;
 
+                let show_i = MenuItem::with_id(app, "show", "Open KeyLooper", true, None::<&str>)?;
                 let settings_i = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
                 let quit_i = MenuItem::with_id(app, "quit", "Exit", true, None::<&str>)?;
-                let menu = Menu::with_items(app, &[&settings_i, &quit_i])?;
+                let menu = Menu::with_items(app, &[&show_i, &settings_i, &quit_i])?;
 
                 let mut tray_builder = TrayIconBuilder::new()
                     .menu(&menu)
                     .on_menu_event(|app, event| match event.id.as_ref() {
-                        "quit" => {
-                            app.exit(0);
+                        "show" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.unminimize();
+                                let _ = window.set_focus();
+                            }
                         }
                         "settings" => {
                             if let Some(window) = app.get_webview_window("main") {
                                 let _ = window.show();
+                                let _ = window.unminimize();
                                 let _ = window.set_focus();
                             }
                             let _ = app.emit("open-settings", ());
                         }
+                        "quit" => {
+                            app.exit(0);
+                        }
                         _ => {}
+                    })
+                    .on_tray_icon_event(|tray, event| {
+                        if let tauri::tray::TrayIconEvent::Click {
+                            button: tauri::tray::MouseButton::Left,
+                            button_state: tauri::tray::MouseButtonState::Up,
+                            ..
+                        } = event
+                        {
+                            if let Some(window) = tray.app_handle().get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.unminimize();
+                                let _ = window.set_focus();
+                            }
+                        }
                     });
 
                 if let Some(icon) = app.default_window_icon() {
@@ -563,6 +586,12 @@ pub fn run() {
             save_custom_skills,
             load_custom_skills
         ])
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
