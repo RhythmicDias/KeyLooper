@@ -245,3 +245,31 @@ select option {
   background-color: var(--bg-color);
   color: var(--text-color);
 }
+
+/* ─── Workspace Modal Pill Buttons ──────────────────────── */
+.workspace-pill-btn {
+  padding: 9px 24px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-color);
+  background: var(--input-bg);
+  border: 1px solid var(--secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  user-select: none;
+}
+.workspace-pill-btn:hover {
+  background: #800000 !important;
+  border-color: #800000 !important;
+  color: #ffffff !important;
+}
+.workspace-pill-btn:hover span,
+.workspace-pill-btn:hover .material-symbols-outlined {
+  color: #ffffff !important;
+}
+

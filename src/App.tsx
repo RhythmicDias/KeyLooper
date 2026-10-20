@@ -2530,7 +2530,7 @@ const App: React.FC = () => {
               </p>
             </div>
 
-            {/* Action Buttons Footer (Pill layout matching reference mockup) */}
+            {/* Action Buttons Footer (All 3 styled as pill buttons with maroon hover) */}
             <div
               style={{
                 display: "flex",
@@ -2541,44 +2541,14 @@ const App: React.FC = () => {
             >
               <button
                 onClick={handleCancelWorkspacePrompt}
-                className="cursor-pointer transition-colors"
-                style={{
-                  padding: "9px 22px",
-                  borderRadius: "9999px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "var(--text-color-muted)",
-                  background: "var(--border-color)",
-                  border: "none",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = "0.8";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = "1";
-                }}
+                className="workspace-pill-btn"
               >
                 Cancel
               </button>
 
               <button
                 onClick={handleProceedWithoutBackup}
-                className="cursor-pointer transition-colors"
-                style={{
-                  padding: "9px 22px",
-                  borderRadius: "9999px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "var(--text-color)",
-                  background: "var(--input-bg)",
-                  border: "1px solid var(--secondary)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "var(--bg-color)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "var(--input-bg)";
-                }}
+                className="workspace-pill-btn"
               >
                 No Backup
               </button>
@@ -2586,23 +2556,8 @@ const App: React.FC = () => {
               <button
                 onClick={handleAllowBackup}
                 disabled={isCreatingBackup}
-                className="cursor-pointer transition-all flex items-center gap-1.5 shadow-sm"
-                style={{
-                  padding: "9px 24px",
-                  borderRadius: "9999px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#ffffff",
-                  background: "var(--primary)",
-                  border: "none",
-                  opacity: isCreatingBackup ? 0.75 : 1,
-                }}
-                onMouseEnter={(e) => {
-                  if (!isCreatingBackup) e.currentTarget.style.opacity = "0.92";
-                }}
-                onMouseLeave={(e) => {
-                  if (!isCreatingBackup) e.currentTarget.style.opacity = "1";
-                }}
+                className="workspace-pill-btn"
+                style={{ opacity: isCreatingBackup ? 0.75 : 1 }}
               >
                 {isCreatingBackup ? (
                   <>
