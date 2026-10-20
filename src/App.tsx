@@ -1665,23 +1665,43 @@ const App: React.FC = () => {
                     onClick={() => setShowWorkspaceMenu(false)}
                   />
                   <div
-                    className="absolute left-0 mt-2 z-50 rounded-[22px] px-6 pt-6 pb-5 flex flex-col fade-in"
+                    className="absolute left-0 mt-2 z-50 flex flex-col fade-in"
                     style={{
-                      width: "480px",
+                      width: "490px",
                       maxWidth: "calc(100vw - 32px)",
                       background: "var(--bg-color)",
                       border: "1px solid var(--border-color)",
-                      boxShadow: "0 16px 40px rgba(0, 0, 0, 0.16)",
+                      boxShadow: "0 20px 48px rgba(0, 0, 0, 0.18)",
                       backdropFilter: "blur(16px)",
+                      borderRadius: "26px",
+                      padding: "20px 24px 22px 24px",
                       fontFamily:
                         "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                     }}
                   >
-                    <div className="flex items-center justify-between px-2 pt-0.5 mb-3">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-color)]">
+                    <div
+                      className="flex items-center justify-between"
+                      style={{
+                        paddingTop: "12px",
+                        paddingBottom: "8px",
+                        paddingLeft: "14px",
+                        paddingRight: "20px",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      <span
+                        className="uppercase font-bold text-[var(--text-color)]"
+                        style={{
+                          fontSize: "11px",
+                          letterSpacing: "0.08em",
+                        }}
+                      >
                         ACTIVE WORKSPACE
                       </span>
-                      <div className="flex items-center gap-1.5 text-xs text-[var(--text-color-muted)]">
+                      <div
+                        className="flex items-center gap-2 text-[var(--text-color-muted)]"
+                        style={{ fontSize: "12px" }}
+                      >
                         <span>
                           {agentBackupPath ? "Backup snapshot created" : "No backup snapshot"}
                         </span>
@@ -1689,15 +1709,17 @@ const App: React.FC = () => {
                           name={agentBackupPath ? "cloud_done" : "cloud"}
                           size={16}
                           thin
-                          className="opacity-75"
+                          style={{ opacity: 0.8 }}
                         />
                       </div>
                     </div>
 
                     <div
-                      className="flex items-center gap-2.5 px-4 py-2.5 rounded-full border border-[var(--border-color)] mb-3"
+                      className="flex items-center gap-2.5 rounded-full border border-[var(--border-color)]"
                       style={{
                         background: "var(--input-bg)",
+                        padding: "10px 16px",
+                        marginBottom: "10px",
                       }}
                     >
                       <Icon
