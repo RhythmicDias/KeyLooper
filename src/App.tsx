@@ -577,6 +577,43 @@ const App: React.FC = () => {
     agentWorkspace,
   ]);
 
+  // ─── OS-Level Global Shortcut (Restores KeyLooper from System Tray) ────────
+  useEffect(() => {
+    let active = true;
+    const registerGlobal = async () => {
+      try {
+        const { register, unregisterAll } = await import(
+          "@tauri-apps/plugin-global-shortcut"
+        );
+        await unregisterAll();
+        if (!active) return;
+        const rawShortcut = shortcuts.toggleAppWindow || "Ctrl+Shift+K";
+        const globalHotkey = rawShortcut.replace(/\bCtrl\b/g, "CommandOrControl");
+        await register(globalHotkey, async (event) => {
+          if (event.state === "Pressed") {
+            try {
+              const { invoke } = await import("@tauri-apps/api/core");
+              await invoke("show_main_window");
+            } catch (err) {
+              console.warn("Failed to show main window via global shortcut:", err);
+            }
+          }
+        });
+      } catch (err) {
+        console.warn("Global shortcut registration failed:", err);
+      }
+    };
+
+    registerGlobal();
+
+    return () => {
+      active = false;
+      import("@tauri-apps/plugin-global-shortcut")
+        .then(({ unregisterAll }) => unregisterAll())
+        .catch(() => {});
+    };
+  }, [shortcuts.toggleAppWindow]);
+
   // Sync theme
   useEffect(() => {
     if (theme === "dark") {

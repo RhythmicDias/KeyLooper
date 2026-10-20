@@ -1,4 +1,5 @@
 use keyring::Entry;
+use tauri::Manager;
 
 /// Validate that a key_id looks like a UUID (basic hex-dash pattern).
 fn is_valid_uuid(s: &str) -> bool {
@@ -495,6 +496,16 @@ fn hide_to_tray(window: tauri::WebviewWindow) -> Result<(), String> {
     window.hide().map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn show_main_window(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+    Ok(())
+}
+
 pub fn run() {
     #[cfg(windows)]
     {
@@ -583,6 +594,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             save_api_key,
             load_api_key,
@@ -598,7 +610,8 @@ pub fn run() {
             upload_file_to_gemini,
             save_custom_skills,
             load_custom_skills,
-            hide_to_tray
+            hide_to_tray,
+            show_main_window
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

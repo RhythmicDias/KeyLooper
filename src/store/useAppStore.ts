@@ -45,7 +45,8 @@ export type ShortcutAction =
   | "clearChat"
   | "focusInput"
   | "openGeminiWeb"
-  | "selectWorkspace";
+  | "selectWorkspace"
+  | "toggleAppWindow";
 
 export type ShortcutMap = Record<ShortcutAction, string>;
 
@@ -64,6 +65,7 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   focusInput: "Ctrl+/",
   openGeminiWeb: "Alt+W",
   selectWorkspace: "Ctrl+O",
+  toggleAppWindow: "Ctrl+Shift+K",
 };
 
 export const SHORTCUT_LABELS: Record<ShortcutAction, { label: string; description: string }> = {
@@ -81,6 +83,7 @@ export const SHORTCUT_LABELS: Record<ShortcutAction, { label: string; descriptio
   focusInput: { label: "Focus Prompt Input", description: "Jump cursor directly to the chat input box" },
   openGeminiWeb: { label: "Google Gemini Web", description: "Open official Google Gemini web app window" },
   selectWorkspace: { label: "Select Workspace Folder", description: "Choose local workspace directory for Autonomous File Agent" },
+  toggleAppWindow: { label: "Show / Restore KeyLooper (Global)", description: "Global hotkey to bring KeyLooper up from the system tray" },
 };
 
 /** Convert a KeyboardEvent into a normalized shortcut string like "Ctrl+Shift+D" or "Ctrl+N". */
