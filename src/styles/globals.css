@@ -264,8 +264,8 @@ select option {
   user-select: none;
 }
 .workspace-pill-btn:hover {
-  background: #800000 !important;
-  border-color: #800000 !important;
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
   color: #ffffff !important;
 }
 .workspace-pill-btn:hover span,
