@@ -368,6 +368,127 @@ async fn open_gemini_web_window(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct GeminiFileUploadResponse {
+    pub file_uri: String,
+    pub mime_type: String,
+}
+
+#[tauri::command]
+async fn upload_file_to_gemini(
+    api_key: String,
+    display_name: String,
+    mime_type: String,
+    data: Vec<u8>,
+) -> Result<GeminiFileUploadResponse, String> {
+    let key = api_key.trim();
+    if key.is_empty() {
+        return Err("API key is required for upload.".to_string());
+    }
+
+    let init_url = format!(
+        "https://generativelanguage.googleapis.com/upload/v1beta/files?key={}",
+        key
+    );
+
+    let client = reqwest::Client::new();
+    let init_res = client
+        .post(&init_url)
+        .header("Content-Type", "application/json")
+        .header("X-Goog-Upload-Protocol", "resumable")
+        .header("X-Goog-Upload-Command", "start")
+        .header("X-Goog-Upload-Header-Content-Length", data.len().to_string())
+        .header("X-Goog-Upload-Header-Content-Type", &mime_type)
+        .json(&serde_json::json!({
+            "file": {
+                "display_name": display_name
+            }
+        }))
+        .send()
+        .await
+        .map_err(|e| format!("Failed to initiate upload session: {}", e))?;
+
+    if !init_res.status().is_success() {
+        let err = init_res.text().await.unwrap_or_default();
+        return Err(format!("Upload initiation failed: {}", err));
+    }
+
+    let upload_url = init_res
+        .headers()
+        .get("x-goog-upload-url")
+        .or_else(|| init_res.headers().get("X-Goog-Upload-Url"))
+        .ok_or_else(|| "Gemini server did not return an upload session URL.".to_string())?
+        .to_str()
+        .map_err(|e| format!("Invalid upload URL header: {}", e))?
+        .to_string();
+
+    let upload_res = client
+        .post(&upload_url)
+        .header("Content-Length", data.len().to_string())
+        .header("X-Goog-Upload-Offset", "0")
+        .header("X-Goog-Upload-Command", "upload, finalize")
+        .header("Content-Type", &mime_type)
+        .body(data)
+        .send()
+        .await
+        .map_err(|e| format!("File upload transfer failed: {}", e))?;
+
+    if !upload_res.status().is_success() {
+        let err = upload_res.text().await.unwrap_or_default();
+        return Err(format!("Gemini file upload failed: {}", err));
+    }
+
+    let res_json: serde_json::Value = upload_res
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse Gemini upload response: {}", e))?;
+
+    let file_uri = res_json["file"]["uri"]
+        .as_str()
+        .ok_or_else(|| "Missing file URI in Gemini response.".to_string())?
+        .to_string();
+
+    let returned_mime = res_json["file"]["mimeType"]
+        .as_str()
+        .unwrap_or(&mime_type)
+        .to_string();
+
+    Ok(GeminiFileUploadResponse {
+        file_uri,
+        mime_type: returned_mime,
+    })
+}
+
+#[tauri::command]
+fn save_custom_skills(app: tauri::AppHandle, skills_json: String) -> Result<(), String> {
+    use std::fs;
+    use tauri::Manager;
+    let app_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    fs::create_dir_all(&app_dir).map_err(|e| format!("Failed to create directory: {}", e))?;
+    let path = app_dir.join("custom_skills.json");
+    fs::write(path, skills_json).map_err(|e| format!("Failed to write skills: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+fn load_custom_skills(app: tauri::AppHandle) -> Result<String, String> {
+    use std::fs;
+    use tauri::Manager;
+    let app_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    let path = app_dir.join("custom_skills.json");
+    if path.exists() {
+        fs::read_to_string(path).map_err(|e| format!("Failed to read skills: {}", e))
+    } else {
+        Ok("[]".to_string())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     #[cfg(windows)]
@@ -437,7 +558,10 @@ pub fn run() {
             agent_rename_file,
             agent_delete_file,
             agent_restore_backup,
-            open_gemini_web_window
+            open_gemini_web_window,
+            upload_file_to_gemini,
+            save_custom_skills,
+            load_custom_skills
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

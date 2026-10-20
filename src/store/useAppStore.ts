@@ -249,6 +249,19 @@ export const DEFAULT_SKILLS: Skill[] = [
   },
 ];
 
+export function syncCustomSkillsToDisk(skills: Skill[]) {
+  if (typeof window !== "undefined" && ("__TAURI_INTERNALS__" in window || "__TAURI__" in window)) {
+    try {
+      const customSkills = skills.filter(
+        (sk) => !DEFAULT_SKILLS.some((d) => d.id === sk.id)
+      );
+      invoke("save_custom_skills", {
+        skillsJson: JSON.stringify(customSkills),
+      }).catch(() => {});
+    } catch (_) {}
+  }
+}
+
 export interface UsageRecord {
   id: string;
   apiKeyId: string;
@@ -639,19 +652,32 @@ export const useAppStore = create<AppState>()(
       createSkill: (name, systemPrompt) => {
         const id = crypto.randomUUID();
         const now = Date.now();
-        set((s) => ({
-          skills: [...s.skills, { id, name, systemPrompt, createdAt: now, updatedAt: now }],
-        }));
+        set((s) => {
+          const updated = [
+            ...s.skills,
+            { id, name, systemPrompt, createdAt: now, updatedAt: now },
+          ];
+          syncCustomSkillsToDisk(updated);
+          return { skills: updated };
+        });
       },
       updateSkill: (id, name, systemPrompt) => {
-        set((s) => ({
-          skills: s.skills.map((skill) =>
-            skill.id === id ? { ...skill, name, systemPrompt, updatedAt: Date.now() } : skill
-          ),
-        }));
+        set((s) => {
+          const updated = s.skills.map((skill) =>
+            skill.id === id
+              ? { ...skill, name, systemPrompt, updatedAt: Date.now() }
+              : skill
+          );
+          syncCustomSkillsToDisk(updated);
+          return { skills: updated };
+        });
       },
       deleteSkill: (id) => {
-        set((s) => ({ skills: s.skills.filter((skill) => skill.id !== id) }));
+        set((s) => {
+          const updated = s.skills.filter((skill) => skill.id !== id);
+          syncCustomSkillsToDisk(updated);
+          return { skills: updated };
+        });
       },
 
       // ── Usage ─────────────────────────────────────────────────────────────
@@ -763,6 +789,7 @@ export const useAppStore = create<AppState>()(
             }
           }
           merged.skills = skillsToKeep;
+          syncCustomSkillsToDisk(skillsToKeep);
 
           if (!Array.isArray(merged.customModels)) {
             merged.customModels = [];

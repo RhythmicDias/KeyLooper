@@ -105,14 +105,15 @@ html, body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background-color: transparent !important;
 }
 
 /* Smooth macOS rounded window frame */
 .macos-window-frame {
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   border: 1px solid var(--border-color);
+  box-shadow: none !important;
 }
 
 /* ─── Typography helpers ────────────────────────────────── */

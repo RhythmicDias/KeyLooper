@@ -604,7 +604,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onNewChat }) => {
                   color: "var(--text-color)",
                 }}
               >
-                KeyLooper <span style={{ fontSize: "11px", fontWeight: 400, color: "var(--text-color-muted)" }}>v0.2.1</span>
+                KeyLooper <span style={{ fontSize: "11px", fontWeight: 400, color: "var(--text-color-muted)" }}>v0.2.2</span>
                 {updateAvailable && (
                   <span
                     style={{

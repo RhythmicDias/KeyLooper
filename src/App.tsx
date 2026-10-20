@@ -555,6 +555,30 @@ const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, [autoCheckUpdates, setUpdateAvailable]);
 
+  // Restore custom skills from OS app data directory (recovers custom skills if webview cache was reset on app update)
+  useEffect(() => {
+    if (typeof window !== "undefined" && ("__TAURI_INTERNALS__" in window || "__TAURI__" in window)) {
+      invoke<string>("load_custom_skills")
+        .then((json) => {
+          if (!json || json === "[]") return;
+          try {
+            const diskSkills = JSON.parse(json);
+            if (Array.isArray(diskSkills) && diskSkills.length > 0) {
+              useAppStore.setState((s) => {
+                const currentIds = new Set(s.skills.map((sk) => sk.id));
+                const missing = diskSkills.filter((sk: any) => sk && sk.id && !currentIds.has(sk.id));
+                if (missing.length > 0) {
+                  return { skills: [...s.skills, ...missing] };
+                }
+                return s;
+              });
+            }
+          } catch (_) {}
+        })
+        .catch(() => {});
+    }
+  }, []);
+
   const handleAttach = async (files: FileList | File[]) => {
     setIsAttaching(true);
     setLocalError(null);

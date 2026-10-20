@@ -873,7 +873,36 @@ export async function uploadFileToGemini(
 ): Promise<{ fileUri: string; mimeType: string }> {
   const mimeType = file.type || "application/octet-stream";
 
-  // Step 1: Initiate Resumable Upload Session
+  // 1. Native desktop upload via Tauri Rust backend (zero CORS, zero WKWebView restrictions)
+  try {
+    if (onProgress) onProgress(15);
+    const arrayBuffer = await file.arrayBuffer();
+    if (onProgress) onProgress(45);
+    const uint8 = new Uint8Array(arrayBuffer);
+
+    const res = await invoke<{ file_uri: string; mime_type: string }>(
+      "upload_file_to_gemini",
+      {
+        apiKey,
+        displayName: file.name,
+        mimeType,
+        data: Array.from(uint8),
+      }
+    );
+    if (onProgress) onProgress(100);
+    return {
+      fileUri: res.file_uri,
+      mimeType: res.mime_type || mimeType,
+    };
+  } catch (nativeErr: any) {
+    const msg = nativeErr?.message || String(nativeErr);
+    // If running in Tauri backend, surface the real error
+    if (typeof window !== "undefined" && ("__TAURI_INTERNALS__" in window || "__TAURI__" in window)) {
+      throw new Error(`Upload failed: ${msg}`);
+    }
+  }
+
+  // 2. Web / Mock fallback (used in unit test environments without Tauri runtime)
   const initUrl = `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`;
   const initRes = await fetch(initUrl, {
     method: "POST",
@@ -907,11 +936,9 @@ export async function uploadFileToGemini(
     throw new Error("Gemini server did not return an upload session URL (X-Goog-Upload-Url header missing).");
   }
 
-  // Step 2: Upload file binary to the session URL with progress tracking via XMLHttpRequest
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", uploadUrl, true);
-    xhr.setRequestHeader("Content-Length", String(file.size));
     xhr.setRequestHeader("X-Goog-Upload-Offset", "0");
     xhr.setRequestHeader("X-Goog-Upload-Command", "upload, finalize");
 
@@ -948,3 +975,4 @@ export async function uploadFileToGemini(
     xhr.send(file);
   });
 }
+
