@@ -2393,94 +2393,198 @@ const App: React.FC = () => {
           WORKSPACE BACKUP CONFIRMATION MODAL
       ════════════════════════════════════════════════ */}
       {pendingWorkspacePrompt && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 fade-in">
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 fade-in"
+          style={{
+            background: "rgba(0, 0, 0, 0.45)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+          }}
+        >
           <div
-            className="glass-modal rounded-2xl p-5 max-w-md w-full shadow-2xl flex flex-col gap-4 border"
+            className="glass-modal shadow-2xl flex flex-col"
             style={{
+              width: "100%",
+              maxWidth: "520px",
+              padding: "24px 28px",
+              borderRadius: "16px",
               background: "var(--modal-bg)",
-              borderColor: "var(--modal-border)",
+              border: "1px solid var(--modal-border)",
+              boxShadow:
+                "0 24px 48px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--modal-border)",
+              fontFamily:
+                "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
             }}
           >
+            {/* Header: Icon + Title */}
             <div className="flex items-center gap-3">
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                 style={{
-                  background: "rgba(177,98,77,0.12)",
+                  background: "rgba(177, 98, 77, 0.12)",
                   color: "var(--primary)",
                 }}
               >
                 <Icon name="folder_open" size={22} />
               </div>
-              <div className="min-w-0">
-                <div className="text-[11px] font-semibold text-[var(--primary)] uppercase tracking-wider">
-                  Workspace Confirmation
-                </div>
+              <div>
                 <div
-                  className="text-xs font-mono text-[var(--text-color)] font-medium truncate"
-                  title={pendingWorkspacePrompt}
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    color: "var(--primary)",
+                  }}
                 >
-                  {pendingWorkspacePrompt}
+                  Workspace Safety
                 </div>
+                <h3
+                  style={{
+                    fontSize: "16px",
+                    fontWeight: 700,
+                    color: "var(--text-color)",
+                    margin: 0,
+                    lineHeight: 1.3,
+                  }}
+                >
+                  Folder Permission & Backup
+                </h3>
               </div>
             </div>
 
-            <p className="text-sm text-[var(--text-color)] leading-relaxed">
+            {/* Folder Path Callout */}
+            <div
+              className="flex items-center gap-2.5 my-3.5 px-3 py-2 rounded-lg"
+              style={{
+                background: "var(--input-bg)",
+                border: "1px solid var(--border-color)",
+              }}
+            >
+              <Icon
+                name="folder"
+                size={18}
+                style={{ color: "var(--primary)", flexShrink: 0 }}
+              />
+              <span
+                className="font-mono truncate select-all"
+                style={{
+                  fontSize: "12px",
+                  color: "var(--text-color)",
+                  letterSpacing: "-0.01em",
+                }}
+                title={pendingWorkspacePrompt}
+              >
+                {pendingWorkspacePrompt}
+              </span>
+            </div>
+
+            {/* Prompt Description */}
+            <p
+              style={{
+                fontSize: "14px",
+                lineHeight: "1.55",
+                color: "var(--text-color)",
+                margin: "0 0 6px 0",
+                fontWeight: 500,
+              }}
+            >
               I'm working inside your selected folder. Do you want me to create a backup before I proceed?
             </p>
+            <p
+              style={{
+                fontSize: "12px",
+                lineHeight: "1.45",
+                color: "var(--text-color-muted)",
+                margin: "0 0 20px 0",
+              }}
+            >
+              A safety backup saves an untouched snapshot to a{" "}
+              <code
+                style={{
+                  fontSize: "11px",
+                  padding: "1px 5px",
+                  borderRadius: "4px",
+                  background: "var(--input-bg)",
+                  border: "1px solid var(--border-color)",
+                  fontFamily: "'JetBrains Mono', monospace",
+                }}
+              >
+                __BACKUP_FOLDER
+              </code>{" "}
+              so your files can be reverted anytime.
+            </p>
 
-            <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-[var(--border-color)]">
+            {/* Action Buttons Footer */}
+            <div
+              className="flex items-center justify-end gap-2.5 pt-4"
+              style={{
+                borderTop: "1px solid var(--border-color)",
+              }}
+            >
               <button
                 onClick={handleCancelWorkspacePrompt}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                className="px-3.5 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer"
                 style={{
                   color: "var(--text-color-muted)",
                   background: "transparent",
                   border: "1px solid var(--border-color)",
                 }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "var(--input-bg)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "transparent")
-                }
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "var(--input-bg)";
+                  e.currentTarget.style.color = "var(--text-color)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = "var(--text-color-muted)";
+                }}
               >
                 Cancel
               </button>
+
               <button
                 onClick={handleProceedWithoutBackup}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                className="px-3.5 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer"
                 style={{
                   color: "var(--text-color)",
                   background: "var(--input-bg)",
                   border: "1px solid var(--border-color)",
                 }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "var(--bg-color)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "var(--input-bg)")
-                }
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "var(--bg-color)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "var(--input-bg)";
+                }}
               >
                 Proceed Without Backup
               </button>
+
               <button
                 onClick={handleAllowBackup}
                 disabled={isCreatingBackup}
-                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity cursor-pointer shadow-sm flex items-center gap-1.5"
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-white transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
                 style={{
                   background: "var(--primary)",
                   border: "none",
-                  opacity: isCreatingBackup ? 0.7 : 1,
+                  opacity: isCreatingBackup ? 0.75 : 1,
+                  boxShadow: "0 2px 8px rgba(177, 98, 77, 0.28)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isCreatingBackup) e.currentTarget.style.opacity = "0.92";
+                }}
+                onMouseLeave={(e) => {
+                  if (!isCreatingBackup) e.currentTarget.style.opacity = "1";
                 }}
               >
                 {isCreatingBackup ? (
                   <>
                     <Icon name="progress_activity" size={14} className="animate-spin" />
-                    <span>Backing up...</span>
+                    <span>Creating Backup...</span>
                   </>
                 ) : (
                   <>
-                    <Icon name="security" size={14} />
+                    <Icon name="security" size={15} />
                     <span>Allow</span>
                   </>
                 )}
