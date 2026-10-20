@@ -2405,34 +2405,40 @@ const App: React.FC = () => {
             className="glass-modal shadow-2xl flex flex-col"
             style={{
               width: "100%",
-              maxWidth: "520px",
-              padding: "24px 28px",
-              borderRadius: "16px",
+              maxWidth: "540px",
+              padding: "30px 34px",
+              borderRadius: "24px",
               background: "var(--modal-bg)",
               border: "1px solid var(--modal-border)",
               boxShadow:
-                "0 24px 48px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--modal-border)",
+                "0 24px 60px -12px rgba(0, 0, 0, 0.28)",
               fontFamily:
                 "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
             }}
           >
             {/* Header: Icon + Title */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3.5">
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                 style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "14px",
                   background: "rgba(177, 98, 77, 0.12)",
                   color: "var(--primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
                 }}
               >
-                <Icon name="folder_open" size={22} />
+                <Icon name="verified_user" size={24} />
               </div>
               <div>
                 <div
                   style={{
                     fontSize: "11px",
                     fontWeight: 700,
-                    letterSpacing: "0.06em",
+                    letterSpacing: "0.08em",
                     textTransform: "uppercase",
                     color: "var(--primary)",
                   }}
@@ -2441,22 +2447,28 @@ const App: React.FC = () => {
                 </div>
                 <h3
                   style={{
-                    fontSize: "16px",
+                    fontSize: "18px",
                     fontWeight: 700,
                     color: "var(--text-color)",
-                    margin: 0,
-                    lineHeight: 1.3,
+                    margin: "2px 0 0 0",
+                    lineHeight: 1.25,
                   }}
                 >
-                  Folder Permission & Backup
+                  Proceed with Backup?
                 </h3>
               </div>
             </div>
 
-            {/* Folder Path Callout */}
+            {/* Folder Path Pill */}
             <div
-              className="flex items-center gap-2.5 my-3.5 px-3 py-2 rounded-lg"
               style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                marginTop: "18px",
+                marginBottom: "16px",
+                padding: "9px 14px",
+                borderRadius: "10px",
                 background: "var(--input-bg)",
                 border: "1px solid var(--border-color)",
               }}
@@ -2464,12 +2476,12 @@ const App: React.FC = () => {
               <Icon
                 name="folder"
                 size={18}
-                style={{ color: "var(--primary)", flexShrink: 0 }}
+                style={{ color: "var(--text-color-muted)", flexShrink: 0 }}
               />
               <span
-                className="font-mono truncate select-all"
+                className="select-all truncate font-mono"
                 style={{
-                  fontSize: "12px",
+                  fontSize: "13px",
                   color: "var(--text-color)",
                   letterSpacing: "-0.01em",
                 }}
@@ -2479,64 +2491,71 @@ const App: React.FC = () => {
               </span>
             </div>
 
-            {/* Prompt Description */}
-            <p
-              style={{
-                fontSize: "14px",
-                lineHeight: "1.55",
-                color: "var(--text-color)",
-                margin: "0 0 6px 0",
-                fontWeight: 500,
-              }}
-            >
-              I'm working inside your selected folder. Do you want me to create a backup before I proceed?
-            </p>
-            <p
-              style={{
-                fontSize: "12px",
-                lineHeight: "1.45",
-                color: "var(--text-color-muted)",
-                margin: "0 0 20px 0",
-              }}
-            >
-              A safety backup saves an untouched snapshot to a{" "}
-              <code
+            {/* Content Explanation */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "26px" }}>
+              <p
                 style={{
-                  fontSize: "11px",
-                  padding: "1px 5px",
-                  borderRadius: "4px",
-                  background: "var(--input-bg)",
-                  border: "1px solid var(--border-color)",
-                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "15px",
+                  fontWeight: 600,
+                  color: "var(--text-color)",
+                  margin: 0,
+                  lineHeight: 1.45,
                 }}
               >
-                __BACKUP_FOLDER
-              </code>{" "}
-              so your files can be reverted anytime.
-            </p>
+                We recommend creating a backup of your files before proceeding.
+              </p>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "var(--text-color-muted)",
+                  margin: 0,
+                  lineHeight: 1.45,
+                }}
+              >
+                A safety backup will be saved to{" "}
+                <code
+                  style={{
+                    fontSize: "12px",
+                    fontFamily: "'JetBrains Mono', monospace",
+                    padding: "2px 6px",
+                    borderRadius: "6px",
+                    background: "var(--input-bg)",
+                    border: "1px solid var(--border-color)",
+                    color: "var(--text-color)",
+                  }}
+                >
+                  __BACKUP_FOLDER
+                </code>{" "}
+                so you can restore your files anytime.
+              </p>
+            </div>
 
-            {/* Action Buttons Footer */}
+            {/* Action Buttons Footer (Pill layout matching reference mockup) */}
             <div
-              className="flex items-center justify-end gap-2.5 pt-4"
               style={{
-                borderTop: "1px solid var(--border-color)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                gap: "12px",
               }}
             >
               <button
                 onClick={handleCancelWorkspacePrompt}
-                className="px-3.5 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                className="cursor-pointer transition-colors"
                 style={{
+                  padding: "9px 22px",
+                  borderRadius: "9999px",
+                  fontSize: "13px",
+                  fontWeight: 600,
                   color: "var(--text-color-muted)",
-                  background: "transparent",
-                  border: "1px solid var(--border-color)",
+                  background: "var(--border-color)",
+                  border: "none",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "var(--input-bg)";
-                  e.currentTarget.style.color = "var(--text-color)";
+                  e.currentTarget.style.opacity = "0.8";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = "var(--text-color-muted)";
+                  e.currentTarget.style.opacity = "1";
                 }}
               >
                 Cancel
@@ -2544,11 +2563,15 @@ const App: React.FC = () => {
 
               <button
                 onClick={handleProceedWithoutBackup}
-                className="px-3.5 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                className="cursor-pointer transition-colors"
                 style={{
+                  padding: "9px 22px",
+                  borderRadius: "9999px",
+                  fontSize: "13px",
+                  fontWeight: 600,
                   color: "var(--text-color)",
                   background: "var(--input-bg)",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--secondary)",
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = "var(--bg-color)";
@@ -2557,18 +2580,22 @@ const App: React.FC = () => {
                   e.currentTarget.style.background = "var(--input-bg)";
                 }}
               >
-                Proceed Without Backup
+                No Backup
               </button>
 
               <button
                 onClick={handleAllowBackup}
                 disabled={isCreatingBackup}
-                className="px-4 py-2 rounded-lg text-xs font-semibold text-white transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
+                className="cursor-pointer transition-all flex items-center gap-1.5 shadow-sm"
                 style={{
+                  padding: "9px 24px",
+                  borderRadius: "9999px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "#ffffff",
                   background: "var(--primary)",
                   border: "none",
                   opacity: isCreatingBackup ? 0.75 : 1,
-                  boxShadow: "0 2px 8px rgba(177, 98, 77, 0.28)",
                 }}
                 onMouseEnter={(e) => {
                   if (!isCreatingBackup) e.currentTarget.style.opacity = "0.92";
@@ -2579,13 +2606,13 @@ const App: React.FC = () => {
               >
                 {isCreatingBackup ? (
                   <>
-                    <Icon name="progress_activity" size={14} className="animate-spin" />
-                    <span>Creating Backup...</span>
+                    <Icon name="progress_activity" size={15} className="animate-spin" />
+                    <span>Backing up...</span>
                   </>
                 ) : (
                   <>
-                    <Icon name="security" size={15} />
-                    <span>Allow</span>
+                    <Icon name="verified_user" size={16} />
+                    <span>Proceed</span>
                   </>
                 )}
               </button>
