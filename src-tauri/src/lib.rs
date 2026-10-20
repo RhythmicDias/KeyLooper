@@ -519,7 +519,7 @@ pub fn run() {
                 let quit_i = MenuItem::with_id(app, "quit", "Exit", true, None::<&str>)?;
                 let menu = Menu::with_items(app, &[&show_i, &settings_i, &quit_i])?;
 
-                let mut tray_builder = TrayIconBuilder::new()
+                let tray_builder = TrayIconBuilder::new()
                     .menu(&menu)
                     .on_menu_event(|app, event| match event.id.as_ref() {
                         "show" => {
@@ -557,11 +557,19 @@ pub fn run() {
                         }
                     });
 
-                if let Some(icon) = app.default_window_icon() {
-                    tray_builder = tray_builder.icon(icon.clone());
-                }
+                let tray_icon = match tauri::image::Image::from_bytes(include_bytes!("../icons/32x32.png")) {
+                    Ok(img) => img,
+                    Err(_) => app
+                        .default_window_icon()
+                        .cloned()
+                        .expect("Failed to load application icon for system tray"),
+                };
 
-                tray_builder.build(app)?;
+                let _tray = tray_builder
+                    .icon(tray_icon)
+                    .tooltip("KeyLooper")
+                    .show_menu_on_left_click(false)
+                    .build(app)?;
             }
             Ok(())
         })
