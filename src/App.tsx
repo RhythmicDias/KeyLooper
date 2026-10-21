@@ -208,13 +208,16 @@ const App: React.FC = () => {
   const [localError, setLocalError] = useState<string | null>(null);
   const [isDockVisible, setIsDockVisible] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [agentActivity, setAgentActivity] = useState<string | null>(null);
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [copiedWorkspacePath, setCopiedWorkspacePath] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEnd = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const inputTextareaRef = useRef<HTMLTextAreaElement>(null);
   const modelSelectRef = useRef<HTMLSelectElement>(null);
 
@@ -441,56 +444,170 @@ const App: React.FC = () => {
     };
   }, [setView]);
 
-  const toggleRecording = () => {
-    try {
-      const SpeechRecognition =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        setLocalError("Speech recognition is not supported in this browser environment.");
-        return;
-      }
-      if (isRecording) {
-        recognitionRef.current?.stop();
-        setIsRecording(false);
-      } else {
-        if (!recognitionRef.current) {
-          const recognition = new SpeechRecognition();
-          recognition.continuous = true;
-          recognition.interimResults = true;
-          recognition.lang = "en-US";
+  const cleanupMediaRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {}
+    }
+    mediaRecorderRef.current = null;
+    if (mediaStreamRef.current) {
+      try {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      } catch {}
+      mediaStreamRef.current = null;
+    }
+    audioChunksRef.current = [];
+    setIsRecording(false);
+  };
 
-          recognition.onstart = () => setIsRecording(true);
-          recognition.onend = () => setIsRecording(false);
-          recognition.onerror = (e: any) => {
-            console.error("Speech recognition error:", e);
-            setIsRecording(false);
-          };
-          recognition.onresult = (e: any) => {
-            let finalSegment = "";
-            for (let i = e.resultIndex; i < e.results.length; ++i) {
-              if (e.results[i].isFinal) {
-                finalSegment += e.results[i][0].transcript;
-              }
-            }
-            if (finalSegment) {
-              setText(
-                (prev) => prev + (prev && !prev.endsWith(" ") ? " " : "") + finalSegment
-              );
-            }
-          };
-          recognitionRef.current = recognition;
-        }
-        recognitionRef.current.start();
-        setIsRecording(true);
+  useEffect(() => {
+    return () => {
+      cleanupMediaRecording();
+    };
+  }, []);
+
+  const handleTranscribeAudio = async (audioBlob: Blob) => {
+    setIsTranscribing(true);
+    setLocalError(null);
+    try {
+      const mime = (audioBlob.type || "audio/webm").split(";")[0].trim();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const res = reader.result as string;
+          const b64 = res.includes(",") ? res.split(",")[1] : res;
+          resolve(b64);
+        };
+        reader.onerror = () => reject(reader.error || new Error("Failed to read audio blob"));
+        reader.readAsDataURL(audioBlob);
+      });
+
+      const state = useAppStore.getState();
+      const rotator = new KeyRotator(state.apiKeys);
+      rotator.setCurrentIndex(state.rotationIndex);
+
+      const response = await sendMessage({
+        model: state.selectedModel,
+        history: [],
+        userParts: [
+          { inlineData: { mimeType: mime, data: base64 } },
+          {
+            text: "You are an accurate speech-to-text dictation assistant. Transcribe the spoken audio verbatim into text with correct punctuation, capitalization, medical/technical terms, and formatting. Return ONLY the transcribed text. Do NOT add any preamble, conversational remarks, timestamps, or quotes. If the audio is silent or unintelligible, return nothing.",
+          },
+        ],
+        rotator,
+        mode: state.mode,
+        proApiKeyId: state.proApiKey?.id,
+        proApiKeyName: state.proApiKey?.name,
+      });
+
+      syncApiKeys(rotator.pool);
+      setRotationIndex(rotator.getCurrentIndex());
+
+      let transcript = response.text?.trim() || "";
+      if (transcript.startsWith('"') && transcript.endsWith('"') && transcript.length > 1) {
+        transcript = transcript.slice(1, -1).trim();
       }
-    } catch (err) {
-      console.error("Failed to start speech recognition:", err);
+
+      if (transcript) {
+        setText((prev) => (prev ? `${prev.trimEnd()} ${transcript}` : transcript));
+        setTimeout(() => inputTextareaRef.current?.focus(), 50);
+      }
+    } catch (err: any) {
+      console.error("Voice dictation error:", err);
+      setLocalError(`Voice transcription failed: ${err?.message || String(err)}`);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const toggleRecording = async () => {
+    if (isTranscribing) return;
+
+    if (isRecording) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
       setIsRecording(false);
-      setLocalError("Speech recognition could not be started in this environment.");
+      return;
+    }
+
+    const state = useAppStore.getState();
+    const activeRotator = new KeyRotator(state.apiKeys);
+    activeRotator.setCurrentIndex(state.rotationIndex);
+    const hasActiveKey =
+      state.mode === "pro"
+        ? !!state.proApiKey?.id
+        : !!activeRotator.getActiveKey();
+
+    if (!hasActiveKey) {
+      setLocalError(
+        "No active Gemini API key configured. Please add an API key in Settings for voice dictation."
+      );
+      return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setLocalError("Microphone access is not supported in this environment.");
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+
+      const mimeType = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+        "audio/ogg",
+        "audio/wav",
+      ].find((type) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(type)) || "";
+
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const chunks = audioChunksRef.current;
+        const recordedType = recorder.mimeType || mimeType || "audio/webm";
+        const audioBlob = new Blob(chunks, { type: recordedType });
+
+        if (mediaStreamRef.current) {
+          mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+          mediaStreamRef.current = null;
+        }
+
+        if (audioBlob.size > 150) {
+          await handleTranscribeAudio(audioBlob);
+        }
+      };
+
+      recorder.start(250);
+      setIsRecording(true);
+      setLocalError(null);
+    } catch (err: any) {
+      console.error("Failed to start audio recording:", err);
+      cleanupMediaRecording();
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        setLocalError("Microphone access was denied. Please allow microphone permissions in system settings.");
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        setLocalError("No microphone found on this device.");
+      } else {
+        setLocalError(`Microphone error: ${err.message || String(err)}`);
+      }
     }
   };
 
   const handleNewChat = () => {
+    cleanupMediaRecording();
     createSession();
     setLocalError(null);
     setText("");
@@ -1394,7 +1511,11 @@ const App: React.FC = () => {
           }}
           disabled={isLoading}
           placeholder={
-            isWelcome
+            isTranscribing
+              ? `Transcribing voice with ${modelLabel(selectedModel)}...`
+              : isRecording
+              ? "Listening... Speak into microphone, then click stop or press Alt+M"
+              : isWelcome
               ? "How can I help you today? (Type @ to invoke an agent skill)"
               : "Continue the conversation… (Type @ for agents)"
           }
@@ -1504,27 +1625,47 @@ const App: React.FC = () => {
             {/* Mic */}
             <button
               onClick={toggleRecording}
-              title={`Voice Dictation (${formatShortcutForDisplay(shortcuts.toggleVoice)})`}
-              className="flex items-center justify-center rounded-full transition-colors"
+              disabled={isTranscribing}
+              title={
+                isTranscribing
+                  ? `Transcribing voice with ${modelLabel(selectedModel)}...`
+                  : isRecording
+                  ? `Recording... Click to finish and transcribe (${formatShortcutForDisplay(shortcuts.toggleVoice)})`
+                  : `Voice Dictation (${formatShortcutForDisplay(shortcuts.toggleVoice)})`
+              }
+              className={`flex items-center justify-center rounded-full transition-all ${
+                isRecording ? "animate-pulse" : ""
+              }`}
               style={{
                 width: "34px",
                 height: "34px",
-                border: "1px solid var(--border-color)",
-                color: isRecording ? "var(--primary)" : "var(--text-color-muted)",
-                background: isRecording ? "var(--glow-color)" : "transparent",
-                cursor: "pointer",
+                border: isRecording
+                  ? "1px solid #ef4444"
+                  : "1px solid var(--border-color)",
+                color: isRecording
+                  ? "#ef4444"
+                  : isTranscribing
+                  ? "var(--primary)"
+                  : "var(--text-color-muted)",
+                background: isRecording
+                  ? "rgba(239, 68, 68, 0.15)"
+                  : isTranscribing
+                  ? "var(--glow-color)"
+                  : "transparent",
+                cursor: isTranscribing ? "wait" : "pointer",
               }}
               onMouseEnter={(e) => {
-                if (!isRecording)
+                if (!isRecording && !isTranscribing)
                   e.currentTarget.style.background = "var(--input-bg)";
               }}
               onMouseLeave={(e) => {
-                if (!isRecording) e.currentTarget.style.background = "transparent";
+                if (!isRecording && !isTranscribing) e.currentTarget.style.background = "transparent";
               }}
             >
               <Icon
-                name={isRecording ? "mic" : "mic_none"}
+                name={isTranscribing ? "sync" : isRecording ? "stop" : "mic"}
                 size={17}
+                className={isTranscribing ? "animate-spin" : ""}
               />
             </button>
 
